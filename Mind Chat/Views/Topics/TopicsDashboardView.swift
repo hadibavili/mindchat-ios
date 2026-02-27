@@ -2,7 +2,7 @@ import SwiftUI
 
 struct TopicsDashboardView: View {
 
-    @StateObject private var vm = TopicsViewModel()
+    @ObservedObject var vm: TopicsViewModel
     @Environment(\.dismiss) private var dismiss
     let columns = [GridItem(.adaptive(minimum: 160), spacing: 12)]
 
@@ -82,7 +82,6 @@ struct TopicsDashboardView: View {
                 TopicDetailView(topicId: topic.id, title: topic.name)
             }
             .refreshable { await vm.refresh() }
-            .task { await vm.load() }
         }
     }
 }

@@ -130,6 +130,19 @@ struct TopicHeaderView: View {
             if let updated = topic.updatedAt {
                 Text(updated.shortFormatted).font(.caption2).foregroundStyle(Color.mcTextTertiary)
             }
+
+            Button {
+                EventBus.shared.publish(.startChatWithTopic(message: "Let's talk about \(topic.name)"))
+            } label: {
+                Text("Let's talk about \(topic.name)")
+                    .font(.subheadline.bold())
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 12)
+                    .background(Color.accentColor)
+                    .clipShape(Capsule())
+            }
+            .padding(.top, 4)
         }
         .padding()
         .frame(maxWidth: .infinity)

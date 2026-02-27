@@ -5,6 +5,7 @@ import SwiftUI
 struct SidebarView: View {
 
     @ObservedObject var conversationsVM: ConversationsViewModel
+    @ObservedObject var topicsVm: TopicsViewModel
     @ObservedObject var chatVM: ChatViewModel
     @Binding var showSidebar: Bool
     @Binding var showKnowledge: Bool
@@ -13,7 +14,6 @@ struct SidebarView: View {
     @Binding var showTopic: TopicNavTarget?
     @EnvironmentObject private var appState: AppState
 
-    @StateObject private var topicsVm = TopicsViewModel()
     @State private var topicSearchText = ""
 
     // MARK: - Filtered Topics
@@ -66,7 +66,6 @@ struct SidebarView: View {
             statsFooter
         }
         .background(Color.mcBgSidebar)
-        .task { await topicsVm.load() }
         .onReceive(EventBus.shared.events) { event in
             if case .topicsUpdated = event {
                 Task { await topicsVm.refresh() }

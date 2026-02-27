@@ -29,6 +29,7 @@ struct MainTabView: View {
     @EnvironmentObject private var appState: AppState
     @StateObject private var chatVM          = ChatViewModel()
     @StateObject private var conversationsVM = ConversationsViewModel()
+    @StateObject private var topicsVM        = TopicsViewModel()
     @State private var showSidebar              = false
     @State private var showKnowledge            = false
     @State private var showSettings             = false
@@ -48,7 +49,7 @@ struct MainTabView: View {
                 )
             }
             .sheet(isPresented: $showKnowledge) {
-                TopicsDashboardView()
+                TopicsDashboardView(vm: topicsVM)
             }
             .sheet(isPresented: $showSettings) {
                 SettingsView()
@@ -86,6 +87,7 @@ struct MainTabView: View {
             if showSidebar {
                 SidebarView(
                     conversationsVM: conversationsVM,
+                    topicsVm: topicsVM,
                     chatVM: chatVM,
                     showSidebar: $showSidebar,
                     showKnowledge: $showKnowledge,
@@ -102,6 +104,7 @@ struct MainTabView: View {
         .animation(.easeOut(duration: 0.25), value: showSidebar)
         .task { await conversationsVM.load() }
         .task { await chatVM.loadSettings() }
+        .task { await topicsVM.load() }
         .onChange(of: appState.selectedConversationId) { _, id in
             guard let id else { return }
             chatVM.newChat()
@@ -116,6 +119,15 @@ struct MainTabView: View {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) {
                     chatVM.newChat()
                     Task { await chatVM.loadMessages(conversationId: convId) }
+                }
+            }
+            if case .startChatWithTopic(let message) = event {
+                showTopic = nil
+                showKnowledge = false
+                showConversationHistory = false
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                    chatVM.newChat()
+                    chatVM.inputText = message
                 }
             }
         }
