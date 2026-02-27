@@ -1,0 +1,321 @@
+import SwiftUI
+import Combine
+
+// MARK: - Chat View Model
+
+@MainActor
+final class ChatViewModel: ObservableObject {
+
+    // MARK: - Published State
+
+    @Published var messages: [ChatMessage] = []
+    @Published var inputText   = ""
+    @Published var isStreaming = false
+    @Published var isLoading   = false
+    @Published var isSearching  = false
+    @Published var isExtracting = false
+    @Published var errorMessage: String?
+    @Published var conversationId: String?
+    @Published var conversationTitle: String?
+    @Published var thinkingStart: Date?
+    @Published var attachments: [PendingAttachment] = []
+    @Published var isUploading = false
+    @Published var isRecording = false
+    @Published var isTranscribing = false
+    @Published var recordingDuration: TimeInterval = 0
+    @Published var showScrollToBottom = false
+    @Published var highlightMessageId: String?
+    @Published var extractedTopics: [ExtractedTopic] = []
+
+    // MARK: - Settings (loaded from server)
+
+    @Published var provider: AIProvider   = .openai
+    @Published var model: String          = "gpt-4.1-mini"
+    @Published var chatMemory: ChatMemoryMode = .alwaysPersist
+    @Published var plan: PlanType         = .free
+    @Published var voiceEnabled: Bool     = false
+    @Published var imageUploadsEnabled: Bool = false
+    @Published var showMemoryIndicators: Bool = true
+
+    // MARK: - Private
+
+    private var streamTask: Task<Void, Never>?
+    private var recordingTimer: Timer?
+
+    private let chat     = ChatService.shared
+    private let upload   = UploadService.shared
+    private let eventBus = EventBus.shared
+
+    // MARK: - Load Messages
+
+    func loadMessages(conversationId: String? = nil, highlight: String? = nil) async {
+        guard let id = conversationId ?? self.conversationId else { return }
+        self.conversationId = id
+        isLoading = true
+        defer { isLoading = false }
+        do {
+            messages = try await chat.messages(conversationId: id, highlight: highlight)
+            if let hl = highlight {
+                highlightMessageId = hl
+                DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                    self.highlightMessageId = nil
+                }
+            }
+        } catch let e as AppError {
+            errorMessage = e.errorDescription
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    // MARK: - Send
+
+    func send() async {
+        let text = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty || !attachments.isEmpty else { return }
+
+        // Upload attachments
+        var uploadedAttachments: [PendingAttachment] = []
+        if !attachments.isEmpty {
+            isUploading = true
+            for var att in attachments {
+                do {
+                    let resp = try await upload.upload(attachment: att)
+                    att.uploadedURL = resp.url
+                    uploadedAttachments.append(att)
+                } catch {
+                    // Skip failed uploads
+                }
+            }
+            isUploading = false
+        }
+
+        // Optimistic user message
+        let userMessage = ChatMessage(
+            content: text,
+            role: .user,
+            conversationId: conversationId,
+            attachments: uploadedAttachments.isEmpty ? nil : uploadedAttachments.map {
+                MessageAttachment(
+                    id: $0.id,
+                    url: $0.uploadedURL ?? "",
+                    name: $0.name,
+                    type: $0.kind == .image ? .image : .file,
+                    mimeType: $0.mimeType
+                )
+            }
+        )
+        messages.append(userMessage)
+
+        // Placeholder streaming message
+        var assistantMessage = ChatMessage(content: "", role: .assistant, isStreaming: true)
+        messages.append(assistantMessage)
+
+        inputText       = ""
+        attachments     = []
+        extractedTopics = []
+        isStreaming     = true
+        thinkingStart   = Date()
+        errorMessage    = nil
+
+        streamTask = Task {
+            do {
+                // Build history: exclude the current user msg and the assistant placeholder
+                // (both just appended), so we only send prior conversation context.
+                let history: [HistoryMessage] = messages.dropLast(2).compactMap { msg in
+                    guard msg.role == .user || msg.role == .assistant,
+                          !msg.isError, !msg.content.isEmpty else { return nil }
+                    return HistoryMessage(role: msg.role, content: msg.content)
+                }
+
+                let stream = try await chat.send(
+                    message: text,
+                    conversationId: conversationId,
+                    provider: provider,
+                    model: model,
+                    history: history,
+                    attachments: uploadedAttachments
+                )
+
+                for try await event in stream {
+                    guard !Task.isCancelled else { break }
+                    handle(event: event, assistantId: assistantMessage.id)
+                    // Update local ref
+                    if let idx = messages.firstIndex(where: { $0.id == assistantMessage.id }) {
+                        assistantMessage = messages[idx]
+                    }
+                }
+            } catch let e as AppError {
+                finishStream(assistantId: assistantMessage.id, error: e.errorDescription)
+            } catch {
+                finishStream(assistantId: assistantMessage.id, error: error.localizedDescription)
+            }
+        }
+    }
+
+    private func handle(event: SSEEvent, assistantId: String) {
+        switch event {
+        case .conversationId(let id):
+            if conversationId == nil {
+                conversationId = id
+                eventBus.publish(.conversationCreated(id: id, title: nil))
+            }
+        case .conversationTitle(let title):
+            conversationTitle = title
+            // Trigger second sidebar refresh now that the title is available
+            if let id = conversationId {
+                eventBus.publish(.conversationCreated(id: id, title: title))
+            }
+        case .token(let token):
+            thinkingStart = nil
+            isSearching = false
+            appendToken(token, to: assistantId)
+        case .searching:
+            isSearching = true
+        case .searchComplete(_, let sources):
+            isSearching = false
+            if !sources.isEmpty {
+                updateSources(sources, for: assistantId)
+            }
+        case .extracting:
+            isExtracting = true
+        case .topicsExtracted(let topics):
+            isExtracting = false
+            if showMemoryIndicators {
+                extractedTopics = topics
+                updateTopics(topics, for: assistantId)
+            }
+            eventBus.publish(.topicsUpdated)
+        case .error(let msg):
+            finishStream(assistantId: assistantId, error: msg)
+        case .done:
+            finishStream(assistantId: assistantId, error: nil)
+        }
+    }
+
+    private func appendToken(_ token: String, to id: String) {
+        guard let idx = messages.firstIndex(where: { $0.id == id }) else { return }
+        messages[idx].content += token
+    }
+
+    private func updateTopics(_ topics: [ExtractedTopic], for id: String) {
+        guard let idx = messages.firstIndex(where: { $0.id == id }) else { return }
+        messages[idx].streamingTopics = topics
+    }
+
+    private func updateSources(_ sources: [SearchSource], for id: String) {
+        guard let idx = messages.firstIndex(where: { $0.id == id }) else { return }
+        messages[idx].sources = sources
+    }
+
+    private func finishStream(assistantId: String, error: String?) {
+        isStreaming   = false
+        isSearching   = false
+        isExtracting  = false
+        thinkingStart = nil
+        streamTask    = nil
+
+        guard let idx = messages.firstIndex(where: { $0.id == assistantId }) else { return }
+        messages[idx].isStreaming = false
+        if let error {
+            messages[idx].isError = true
+            messages[idx].content = error
+        }
+    }
+
+    // MARK: - Stop Streaming
+
+    func stopStreaming() {
+        streamTask?.cancel()
+        streamTask = nil
+        if let idx = messages.indices.last {
+            messages[idx].isStreaming = false
+        }
+        isStreaming = false
+    }
+
+    // MARK: - Message Actions
+
+    func copyMessage(_ message: ChatMessage) {
+        UIPasteboard.general.string = message.content
+        Haptics.light()
+    }
+
+    func editLastUserMessage() {
+        guard let idx = messages.lastIndex(where: { $0.role == .user }) else { return }
+        inputText = messages[idx].content
+        messages.removeSubrange((idx)...)
+    }
+
+    func regenerateLast() async {
+        guard let idx = messages.lastIndex(where: { $0.role == .assistant }),
+              idx > 0
+        else { return }
+        messages.removeSubrange(idx...)
+        if let userIdx = messages.lastIndex(where: { $0.role == .user }) {
+            inputText = messages[userIdx].content
+            messages.removeSubrange(userIdx...)
+        }
+        await send()
+    }
+
+    func retryError(messageId: String) async {
+        if let idx = messages.firstIndex(where: { $0.id == messageId }) {
+            messages.remove(at: idx)
+        }
+        if let userIdx = messages.lastIndex(where: { $0.role == .user }) {
+            inputText = messages[userIdx].content
+            messages.removeSubrange(userIdx...)
+        }
+        await send()
+    }
+
+    // MARK: - Clear Chat
+
+    func clearChat() async {
+        guard let id = conversationId else { return }
+        do {
+            try await chat.clearMessages(conversationId: id)
+            messages = []
+        } catch let e as AppError {
+            errorMessage = e.errorDescription
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    // MARK: - New Chat
+
+    func newChat() {
+        stopStreaming()
+        messages          = []
+        conversationId    = nil
+        conversationTitle = nil
+        inputText         = ""
+        attachments       = []
+        extractedTopics   = []
+        errorMessage      = nil
+    }
+
+    // MARK: - Settings
+
+    func loadSettings() async {
+        guard let s = try? await SettingsService.shared.getSettings() else { return }
+        provider             = s.provider
+        model                = s.model
+        chatMemory           = s.chatMemory
+        plan                 = s.plan
+        showMemoryIndicators = s.showMemoryIndicators
+        // Load plan limits
+        if let usage = try? await SettingsService.shared.getUsage() {
+            voiceEnabled         = usage.limits.voice
+            imageUploadsEnabled  = usage.limits.imageUploads
+        }
+    }
+
+    // MARK: - Suggestion
+
+    func useSuggestion(_ text: String) {
+        inputText = text
+    }
+}

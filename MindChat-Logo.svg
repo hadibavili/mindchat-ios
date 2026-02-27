@@ -1,0 +1,35 @@
+<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" width="200" height="200">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="200" y2="200" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#1BD49E"/>
+      <stop offset="100%" stop-color="#0A7D5C"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="200" height="200" rx="44" fill="url(#bg)"/>
+
+  <!-- Brain: left lobe (white filled ellipse) -->
+  <ellipse cx="82" cy="92" rx="32" ry="42" fill="white"/>
+
+  <!-- Brain: right lobe (white filled ellipse) -->
+  <ellipse cx="118" cy="92" rx="32" ry="42" fill="white"/>
+
+  <!-- Center groove (green strip between lobes) -->
+  <rect x="96" y="50" width="8" height="84" rx="4" fill="url(#bg)"/>
+
+  <!-- Brain fold lines — green on white (left) -->
+  <path d="M56 78 Q65 70 77 75"  fill="none" stroke="#0A7D5C" stroke-width="3.5" stroke-linecap="round" opacity="0.55"/>
+  <path d="M52 96 Q62 87 75 93"  fill="none" stroke="#0A7D5C" stroke-width="3.5" stroke-linecap="round" opacity="0.55"/>
+  <path d="M55 114 Q64 105 76 110" fill="none" stroke="#0A7D5C" stroke-width="3.5" stroke-linecap="round" opacity="0.55"/>
+
+  <!-- Brain fold lines — green on white (right, mirrored) -->
+  <path d="M144 78 Q135 70 123 75"  fill="none" stroke="#0A7D5C" stroke-width="3.5" stroke-linecap="round" opacity="0.55"/>
+  <path d="M148 96 Q138 87 125 93"  fill="none" stroke="#0A7D5C" stroke-width="3.5" stroke-linecap="round" opacity="0.55"/>
+  <path d="M145 114 Q136 105 124 110" fill="none" stroke="#0A7D5C" stroke-width="3.5" stroke-linecap="round" opacity="0.55"/>
+
+  <!-- Chat typing dots (white) -->
+  <circle cx="82"  cy="158" r="7" fill="white"/>
+  <circle cx="100" cy="158" r="7" fill="white"/>
+  <circle cx="118" cy="158" r="7" fill="white"/>
+</svg>
