@@ -352,6 +352,22 @@ struct TopicWithStats: Codable, Identifiable, Hashable, Sendable {
         self.createdAt = createdAt; self.updatedAt = updatedAt
         self.factCount = factCount; self.subtopicCount = subtopicCount
     }
+
+    // Custom decoder: factCount defaults to 0 when the server omits it (e.g. parentTopic objects)
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id           = try c.decode(String.self,  forKey: .id)
+        name         = try c.decode(String.self,  forKey: .name)
+        path         = try c.decode(String.self,  forKey: .path)
+        summary      = try c.decodeIfPresent(String.self, forKey: .summary)
+        icon         = try c.decodeIfPresent(String.self, forKey: .icon)
+        slug         = try c.decodeIfPresent(String.self, forKey: .slug)
+        depth        = try c.decodeIfPresent(Int.self,    forKey: .depth)
+        createdAt    = try c.decodeIfPresent(Date.self,   forKey: .createdAt)
+        updatedAt    = try c.decodeIfPresent(Date.self,   forKey: .updatedAt)
+        factCount    = (try? c.decodeIfPresent(Int.self,  forKey: .factCount)) ?? 0
+        subtopicCount = try c.decodeIfPresent(Int.self,   forKey: .subtopicCount)
+    }
 }
 
 struct TopicDetail: Codable, Sendable {

@@ -82,7 +82,7 @@ struct TopicStatsResponse: Codable, Sendable {
     let totalTopics: Int
     let totalFacts: Int
     let factsByType: FactTypeCounts
-    let recentlyUpdated: [Fact]
+    let recentlyUpdated: [TopicWithStats]
     let topByFactCount: [TopicWithStats]
 }
 

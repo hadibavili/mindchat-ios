@@ -108,5 +108,16 @@ struct MainTabView: View {
             Task { await chatVM.loadMessages(conversationId: id) }
             appState.selectedConversationId = nil
         }
+        .onReceive(EventBus.shared.events) { event in
+            if case .navigateToMessage(let convId, _) = event {
+                showTopic = nil
+                showKnowledge = false
+                showConversationHistory = false
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) {
+                    chatVM.newChat()
+                    Task { await chatVM.loadMessages(conversationId: convId) }
+                }
+            }
+        }
     }
 }
