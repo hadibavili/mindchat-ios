@@ -42,6 +42,14 @@ final class ThemeManager: ObservableObject {
         AppTypography.for_(fontSize)
     }
 
+    var dynamicTypeSize: DynamicTypeSize {
+        switch fontSize {
+        case .small:  return .small
+        case .medium: return .large   // .large is the iOS system default
+        case .large:  return .xLarge
+        }
+    }
+
     // MARK: High-Contrast Aware Token Resolution
     // Views can call these to get the correct color for the current theme + contrast settings.
 

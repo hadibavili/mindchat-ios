@@ -1,12 +1,11 @@
 import SwiftUI
+import UIKit
 
 struct AccountSection: View {
 
     @ObservedObject var appState: AppState
     @State private var showDeleteConfirm = false
     @State private var isExporting       = false
-    @State private var exportData: Data?
-    @State private var showShareSheet    = false
     @State private var errorMessage: String?
 
     var body: some View {
@@ -85,49 +84,61 @@ struct AccountSection: View {
                 showDeleteConfirm = false
             }
         }
-        .sheet(isPresented: $showShareSheet) {
-            if let data = exportData {
-                ActivitySheet(data: data)
-            }
-        }
     }
+
+    // MARK: - Export
 
     private func exportUserData() async {
         isExporting = true
+        errorMessage = nil
         defer { isExporting = false }
         do {
-            exportData    = try await AccountService.shared.exportData()
-            showShareSheet = true
+            let data = try await AccountService.shared.exportData()
+
+            let formatter = DateFormatter()
+            formatter.dateFormat = "yyyy-MM-dd"
+            let filename = "mindchat-export-\(formatter.string(from: Date())).json"
+            let url = FileManager.default.temporaryDirectory.appendingPathComponent(filename)
+            try data.write(to: url)
+
+            presentShareSheet(for: url)
         } catch {
             errorMessage = error.localizedDescription
         }
     }
 
+    private func presentShareSheet(for url: URL) {
+        guard let scene = UIApplication.shared.connectedScenes
+                .compactMap({ $0 as? UIWindowScene }).first,
+              let root = scene.windows.first(where: { $0.isKeyWindow })?.rootViewController
+        else { return }
+
+        let avc = UIActivityViewController(activityItems: [url], applicationActivities: nil)
+        // Required on iPad to avoid crash
+        avc.popoverPresentationController?.sourceView = root.view
+        avc.popoverPresentationController?.sourceRect = CGRect(
+            x: root.view.bounds.midX, y: root.view.bounds.midY, width: 0, height: 0
+        )
+        avc.popoverPresentationController?.permittedArrowDirections = []
+
+        // Find the topmost presented view controller so the share sheet
+        // sits above the settings sheet, not below it.
+        var top = root
+        while let presented = top.presentedViewController {
+            top = presented
+        }
+        top.present(avc, animated: true)
+    }
+
+    // MARK: - Delete
+
     private func deleteData() async {
         do {
             try await AccountService.shared.deleteAllData()
-            // Navigate to clean chat state — account remains active
             appState.selectedConversationId = nil
             appState.selectedTab = 0
         } catch {
             errorMessage = error.localizedDescription
         }
     }
-}
-
-// MARK: - Activity Sheet
-
-struct ActivitySheet: UIViewControllerRepresentable {
-    let data: Data
-
-    func makeUIViewController(context: Context) -> UIActivityViewController {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
-        let filename = "mindchat-export-\(formatter.string(from: Date())).json"
-        let url = FileManager.default.temporaryDirectory.appendingPathComponent(filename)
-        try? data.write(to: url)
-        return UIActivityViewController(activityItems: [url], applicationActivities: nil)
-    }
-
-    func updateUIViewController(_ vc: UIActivityViewController, context: Context) {}
 }

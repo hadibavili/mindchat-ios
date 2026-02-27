@@ -14,6 +14,8 @@ struct Mind_ChatApp: App {
                 .preferredColorScheme(themeManager.preferredColorScheme)
                 .tint(themeManager.accentColor)
                 .appTypography(themeManager.typography)
+                .dynamicTypeSize(themeManager.dynamicTypeSize)
+                .environment(\.legibilityWeight, themeManager.highContrast ? .bold : nil)
                 .toastOverlay()
                 .onOpenURL { url in
                     if let link = DeepLink.from(url: url) {

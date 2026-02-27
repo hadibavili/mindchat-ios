@@ -40,9 +40,9 @@ struct TopicDetailView: View {
                         }
                     }
 
-                    // Knowledge
+                    // Memories
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("Knowledge")
+                        Text("Memories")
                             .font(.headline)
                             .padding(.horizontal)
 
@@ -121,7 +121,7 @@ struct TopicHeaderView: View {
                     .multilineTextAlignment(.center).padding(.horizontal, 32)
             }
             HStack(spacing: 16) {
-                Label("\(topic.factCount) facts", systemImage: "brain")
+                Label("\(topic.factCount) memories", systemImage: "brain")
                 if let sub = topic.subtopicCount {
                     Label("\(sub) subtopics", systemImage: "folder")
                 }
@@ -145,7 +145,7 @@ struct SmallTopicCard: View {
             TopicIconView(iconName: topic.icon ?? topic.name, size: 28)
             VStack(alignment: .leading) {
                 Text(topic.name).font(.caption.bold()).lineLimit(1)
-                Text("\(topic.factCount) facts").font(.caption2).foregroundStyle(.secondary)
+                Text("\(topic.factCount) memories").font(.caption2).foregroundStyle(.secondary)
             }
             Spacer()
         }

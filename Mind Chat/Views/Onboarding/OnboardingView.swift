@@ -13,13 +13,13 @@ struct OnboardingView: View {
         ),
         (
             "brain.head.profile",
-            "Facts get extracted",
-            "Key information — preferences, goals, facts, experiences — is automatically extracted and saved as memories."
+            "Memories are saved",
+            "Key information — preferences, goals, experiences — is automatically saved and organised into topics."
         ),
         (
             "folder.fill.badge.gearshape",
-            "Browse your knowledge",
-            "Explore, search, and edit everything MindChat has learned about you in the Knowledge tab."
+            "Browse your topics",
+            "Explore, search, and edit everything MindChat has learned about you in the Topics tab."
         )
     ]
 

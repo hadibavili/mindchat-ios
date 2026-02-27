@@ -9,7 +9,7 @@ struct KnowledgeSearchView: View {
             // Search bar
             HStack {
                 Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
-                TextField("Search knowledge…", text: $vm.query)
+                TextField("Search topics…", text: $vm.query)
                     .autocorrectionDisabled()
                 if !vm.query.isEmpty {
                     Button {

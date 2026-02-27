@@ -83,7 +83,7 @@ struct MergeTopicSheet: View {
             } message: {
                 let source = vm.detail?.topic.name ?? "this topic"
                 let target = selectedTargetName ?? "the selected topic"
-                Text("All facts and subtopics from \"\(source)\" will be moved into \"\(target)\". This cannot be undone.")
+                Text("All memories and subtopics from \"\(source)\" will be moved into \"\(target)\". This cannot be undone.")
             }
         }
     }

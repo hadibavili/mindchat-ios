@@ -25,14 +25,49 @@ final class SettingsViewModel: ObservableObject {
 
     @Published var isLoading   = false
     @Published var isSaving    = false
-    @Published var saveSuccess = false
-    @Published var errorMessage: String?
 
     private let settingsService = SettingsService.shared
     var themeManager: ThemeManager?
 
+    private var hasLoaded = false
+    private var autoSaveTask: Task<Void, Never>?
+    private var cancellables = Set<AnyCancellable>()
+
     init(themeManager: ThemeManager? = nil) {
         self.themeManager = themeManager
+        setupAutoSave()
+    }
+
+    // MARK: - Auto-Save
+
+    private func setupAutoSave() {
+        let triggers: [AnyPublisher<Void, Never>] = [
+            $provider.map { _ in }.eraseToAnyPublisher(),
+            $model.map { _ in }.eraseToAnyPublisher(),
+            $apiKey.map { _ in }.eraseToAnyPublisher(),
+            $chatMemory.map { _ in }.eraseToAnyPublisher(),
+            $theme.map { _ in }.eraseToAnyPublisher(),
+            $fontSize.map { _ in }.eraseToAnyPublisher(),
+            $persona.map { _ in }.eraseToAnyPublisher(),
+            $highContrast.map { _ in }.eraseToAnyPublisher(),
+            $accentColor.map { _ in }.eraseToAnyPublisher(),
+            $language.map { _ in }.eraseToAnyPublisher(),
+            $autoExtract.map { _ in }.eraseToAnyPublisher(),
+            $showMemoryIndicators.map { _ in }.eraseToAnyPublisher(),
+        ]
+        Publishers.MergeMany(triggers)
+            .sink { [weak self] _ in self?.scheduleAutoSave() }
+            .store(in: &cancellables)
+    }
+
+    private func scheduleAutoSave() {
+        guard hasLoaded else { return }
+        autoSaveTask?.cancel()
+        autoSaveTask = Task { [weak self] in
+            try? await Task.sleep(nanoseconds: 800_000_000)
+            guard !Task.isCancelled else { return }
+            await self?.save()
+        }
     }
 
     // MARK: - Load
@@ -65,10 +100,11 @@ final class SettingsViewModel: ObservableObject {
                 highContrast = s.highContrast
                 accentColor  = s.accentColor
             }
+            hasLoaded = true
         } catch let e as AppError {
-            errorMessage = e.errorDescription
+            ToastManager.shared.error(e.errorDescription ?? "Failed to load settings")
         } catch {
-            errorMessage = error.localizedDescription
+            ToastManager.shared.error(error.localizedDescription)
         }
     }
 
@@ -93,14 +129,10 @@ final class SettingsViewModel: ObservableObject {
                 showMemoryIndicators: showMemoryIndicators
             )
             try await settingsService.updateSettings(update)
-            saveSuccess = true
-            DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-                self.saveSuccess = false
-            }
         } catch let e as AppError {
-            errorMessage = e.errorDescription
+            ToastManager.shared.error(e.errorDescription ?? "Failed to save settings")
         } catch {
-            errorMessage = error.localizedDescription
+            ToastManager.shared.error(error.localizedDescription)
         }
     }
 

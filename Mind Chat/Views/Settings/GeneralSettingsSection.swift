@@ -42,18 +42,36 @@ struct GeneralSettingsSection: View {
                 }
             }
 
-            Picker("Font Size", selection: $vm.fontSize) {
-                ForEach(AppFontSize.allCases, id: \.self) { s in Text(s.label).tag(s) }
-            }
-            .pickerStyle(.segmented)
-            .onChange(of: vm.fontSize) { _, s in
-                themeManager.fontSize = s
+            VStack(alignment: .leading, spacing: 6) {
+                HStack {
+                    Text("Font Size")
+                        .font(.subheadline)
+                    Spacer()
+                    Text(vm.fontSize.label)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                Picker("Font Size", selection: $vm.fontSize) {
+                    ForEach(AppFontSize.allCases, id: \.self) { s in Text(s.label).tag(s) }
+                }
+                .pickerStyle(.segmented)
+                .onChange(of: vm.fontSize) { _, s in
+                    themeManager.fontSize = s
+                }
+                Text("Controls the size of text throughout the app.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
 
-            Toggle("High Contrast", isOn: $vm.highContrast)
-                .onChange(of: vm.highContrast) { _, v in
-                    themeManager.highContrast = v
-                }
+            VStack(alignment: .leading, spacing: 4) {
+                Toggle("High Contrast", isOn: $vm.highContrast)
+                    .onChange(of: vm.highContrast) { _, v in
+                        themeManager.highContrast = v
+                    }
+                Text("Increases text weight for improved readability.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
         }
 
         Section("Behaviour") {
@@ -73,25 +91,5 @@ struct GeneralSettingsSection: View {
             Toggle("Show memory indicators", isOn: $vm.showMemoryIndicators)
         }
 
-        Section {
-            Button {
-                Task { await vm.save() }
-            } label: {
-                HStack {
-                    Spacer()
-                    Group {
-                        if vm.isSaving {
-                            ProgressView().scaleEffect(0.8)
-                        } else if vm.saveSuccess {
-                            Label("Saved", systemImage: "checkmark").foregroundStyle(Color.accentGreen)
-                        } else {
-                            Text("Save Changes")
-                        }
-                    }
-                    Spacer()
-                }
-            }
-            .disabled(vm.isSaving)
-        }
     }
 }

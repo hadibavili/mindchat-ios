@@ -97,22 +97,6 @@ struct AIModelSection: View {
                     .foregroundStyle(.secondary)
             }
 
-            // Save
-            Button {
-                Task { await vm.save() }
-            } label: {
-                Group {
-                    if vm.isSaving {
-                        ProgressView().scaleEffect(0.8)
-                    } else if vm.saveSuccess {
-                        Label("Saved", systemImage: "checkmark").foregroundStyle(Color.accentGreen)
-                    } else {
-                        Text("Save")
-                    }
-                }
-                .frame(maxWidth: .infinity)
-            }
-            .disabled(vm.isSaving)
         }
     }
 }

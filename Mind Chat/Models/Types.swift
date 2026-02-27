@@ -166,6 +166,7 @@ enum AppFontSize: String, Codable, CaseIterable, Sendable {
         case .large: return 1.15
         }
     }
+
 }
 
 enum AppLanguage: String, Codable, CaseIterable, Sendable {

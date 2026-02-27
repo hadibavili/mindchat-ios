@@ -17,7 +17,7 @@ struct ConfirmDeleteAlert: View {
                 Text("Delete all your data?")
                     .font(.title2.bold())
 
-                Text("This will permanently erase all your conversations, messages, topics, and extracted facts. Your account will remain active but completely empty. This action cannot be undone.")
+                Text("This will permanently erase all your conversations, messages, topics, and saved memories. Your account will remain active but completely empty. This action cannot be undone.")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)

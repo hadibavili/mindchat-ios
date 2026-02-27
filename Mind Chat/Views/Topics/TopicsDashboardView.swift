@@ -14,7 +14,7 @@ struct TopicsDashboardView: View {
                     if vm.totalTopics > 0 || vm.totalFacts > 0 {
                         HStack(spacing: 12) {
                             StatPill(label: "Topics", value: vm.totalTopics, icon: "folder.fill")
-                            StatPill(label: "Facts",  value: vm.totalFacts,  icon: "brain")
+                            StatPill(label: "Memories",  value: vm.totalFacts,  icon: "brain")
                         }
                         .padding(.horizontal)
                     }
@@ -68,7 +68,7 @@ struct TopicsDashboardView: View {
                 }
                 .padding(.vertical)
             }
-            .navigationTitle("Knowledge")
+            .navigationTitle("Topics")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -120,12 +120,12 @@ struct TopicsEmptyState: View {
                 .foregroundStyle(Color.accentColor.opacity(0.5))
             Text("No memories yet")
                 .font(.title3.bold())
-            Text("Start a conversation and MindChat will automatically extract and organise your knowledge.")
+            Text("Start a conversation and MindChat will automatically extract and organise your topics.")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
             HStack(spacing: 8) {
-                ForEach(["Facts", "Preferences", "Goals"], id: \.self) { pill in
+                ForEach(["Memories", "Preferences", "Goals"], id: \.self) { pill in
                     Text(pill)
                         .font(.caption.bold())
                         .padding(.horizontal, 12)
