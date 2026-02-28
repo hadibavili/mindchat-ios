@@ -14,7 +14,7 @@ final class SettingsViewModel: ObservableObject {
     @Published var chatMemory:   ChatMemoryMode = .alwaysPersist
     @Published var theme:        AppTheme      = .system
     @Published var fontSize:     AppFontSize   = .medium
-    @Published var persona:      PersonaType   = .balanced
+    @Published var persona:      PersonaType   = .default
     @Published var highContrast: Bool          = false
     @Published var accentColor:  String        = "black"
     @Published var language:     String        = AppLanguage.auto.rawValue
@@ -26,12 +26,58 @@ final class SettingsViewModel: ObservableObject {
     @Published var isLoading    = false
     @Published var isSaving     = false
     @Published var saveSuccess  = false
+    @Published var isDirty      = false
+
+    // Snapshot of last-saved values for dirty detection
+    private var savedProvider:             AIProvider     = .openai
+    private var savedModel:                String         = "gpt-4.1-mini"
+    private var savedApiKey:               String         = ""
+    private var savedChatMemory:           ChatMemoryMode = .alwaysPersist
+    private var savedTheme:                AppTheme       = .system
+    private var savedFontSize:             AppFontSize    = .medium
+    private var savedPersona:              PersonaType    = .default
+    private var savedHighContrast:         Bool           = false
+    private var savedAccentColor:          String         = "black"
+    private var savedLanguage:             String         = AppLanguage.auto.rawValue
+    private var savedAutoExtract:          Bool           = true
+    private var savedShowMemoryIndicators: Bool           = true
 
     private let settingsService = SettingsService.shared
     var themeManager: ThemeManager?
 
     init(themeManager: ThemeManager? = nil) {
         self.themeManager = themeManager
+    }
+
+    func checkDirty() {
+        isDirty = provider             != savedProvider             ||
+                  model                != savedModel                ||
+                  apiKey               != savedApiKey               ||
+                  chatMemory           != savedChatMemory           ||
+                  theme                != savedTheme                ||
+                  fontSize             != savedFontSize             ||
+                  persona              != savedPersona              ||
+                  highContrast         != savedHighContrast         ||
+                  accentColor          != savedAccentColor          ||
+                  language             != savedLanguage             ||
+                  autoExtract          != savedAutoExtract          ||
+                  showMemoryIndicators != savedShowMemoryIndicators
+    }
+
+    private func takeSnapshot() {
+        savedProvider             = provider
+        savedModel                = model
+        savedApiKey               = apiKey
+        savedChatMemory           = chatMemory
+        savedTheme                = theme
+        savedFontSize             = fontSize
+        savedPersona              = persona
+        savedHighContrast         = highContrast
+        savedAccentColor          = accentColor
+        savedLanguage             = language
+        savedAutoExtract          = autoExtract
+        savedShowMemoryIndicators = showMemoryIndicators
+        isDirty = false
     }
 
     // MARK: - Load
@@ -42,10 +88,13 @@ final class SettingsViewModel: ObservableObject {
             applySettings(cached)
         }
 
-        // Phase 2: fetch fresh from server; only show spinner if cache was cold
+        // Phase 2: always fetch fresh from server so cross-platform changes
+        // (e.g. persona changed in the webapp) are picked up immediately.
         let hadCache = settingsService.getCachedSettings() != nil
         if !hadCache { isLoading = true }
         defer { isLoading = false }
+        // Invalidate cache before fetching so the response always overwrites disk.
+        settingsService.invalidateCache()
         do {
             let s = try await settingsService.getSettings()
             applySettings(s)
@@ -84,6 +133,7 @@ final class SettingsViewModel: ObservableObject {
             highContrast = s.highContrast
             accentColor  = s.accentColor
         }
+        takeSnapshot()
     }
 
     // MARK: - Save All
@@ -107,6 +157,7 @@ final class SettingsViewModel: ObservableObject {
                 showMemoryIndicators: showMemoryIndicators
             )
             try await settingsService.updateSettings(update)
+            takeSnapshot()
             saveSuccess = true
             Task {
                 try? await Task.sleep(nanoseconds: 2_000_000_000)

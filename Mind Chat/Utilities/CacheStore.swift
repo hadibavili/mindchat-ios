@@ -28,7 +28,7 @@ enum CacheKey {
         case .topicsTree:     return 10 * 60
         case .topicsStats:    return 10 * 60
         case .topicDetail:    return 5 * 60
-        case .settings:       return 60 * 60
+        case .settings:       return 5 * 60
         case .usage:          return 15 * 60
         }
     }

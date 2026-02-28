@@ -1,4 +1,5 @@
 import Foundation
+import SwiftUI
 
 // MARK: - Enums
 
@@ -98,20 +99,40 @@ enum PlanType: String, Codable, Sendable {
     }
 }
 
-enum PersonaType: String, Codable, CaseIterable, Sendable {
-    case concise
-    case balanced
-    case detailed
-    case casual
-    case professional
+enum PersonaType: String, Codable, CaseIterable, Hashable, Sendable {
+    case `default` = "default"
+    case therapy
+    case teacher
+    case brainstorm
+    case journal
 
     var label: String {
         switch self {
-        case .concise: return "Concise"
-        case .balanced: return "Balanced"
-        case .detailed: return "Detailed"
-        case .casual: return "Casual"
-        case .professional: return "Professional"
+        case .default: return "Default"
+        case .therapy: return "Therapy"
+        case .teacher: return "Teacher"
+        case .brainstorm: return "Brainstorm"
+        case .journal: return "Journal"
+        }
+    }
+
+    var description: String {
+        switch self {
+        case .default: return "Balanced, helpful assistant — clear and genuine."
+        case .therapy: return "Reflective listening, validates emotions, explores feelings."
+        case .teacher: return "Socratic method, step-by-step, checks understanding."
+        case .brainstorm: return "Builds on ideas, generates alternatives, never shoots down."
+        case .journal: return "Prompts reflection, finds patterns, summarizes insights."
+        }
+    }
+
+    var color: Color {
+        switch self {
+        case .default: return .green
+        case .therapy: return Color(red: 0.9, green: 0.3, blue: 0.35)
+        case .teacher: return .blue
+        case .brainstorm: return Color(red: 0.95, green: 0.55, blue: 0.1)
+        case .journal: return Color(red: 0.55, green: 0.35, blue: 0.85)
         }
     }
 }

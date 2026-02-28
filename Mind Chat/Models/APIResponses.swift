@@ -114,7 +114,7 @@ struct SettingsResponse: Codable, Sendable {
         chatMemory           = (try? c.decode(ChatMemoryMode.self,  forKey: .chatMemory))     ?? .alwaysPersist
         theme                = (try? c.decode(AppTheme.self,        forKey: .theme))          ?? .system
         fontSize             = (try? c.decode(AppFontSize.self,     forKey: .fontSize))       ?? .medium
-        persona              = (try? c.decode(PersonaType.self,     forKey: .persona))        ?? .balanced
+        persona              = (try? c.decode(PersonaType.self,     forKey: .persona))        ?? .default
         highContrast         = (try? c.decode(Bool.self,            forKey: .highContrast))   ?? false
         accentColor          = (try? c.decode(String.self,          forKey: .accentColor))    ?? "black"
         language             = (try? c.decode(String.self,          forKey: .language))       ?? "auto"

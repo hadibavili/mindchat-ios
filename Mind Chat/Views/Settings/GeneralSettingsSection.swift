@@ -1,5 +1,52 @@
 import SwiftUI
 
+private struct ChatModePicker: View {
+    @Binding var selected: PersonaType
+
+    var body: some View {
+        VStack(spacing: 0) {
+            let modes = PersonaType.allCases
+            ForEach(Array(modes.enumerated()), id: \.offset) { index, mode in
+                chatModeRow(mode)
+                if index < modes.count - 1 {
+                    Divider().padding(.leading, 24)
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func chatModeRow(_ mode: PersonaType) -> some View {
+        Button {
+            selected = mode
+            Haptics.selection()
+        } label: {
+            HStack(spacing: 14) {
+                Circle()
+                    .fill(mode.color)
+                    .frame(width: 10, height: 10)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(mode.label)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.primary)
+                    Text(mode.description)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.leading)
+                }
+                Spacer()
+                if selected == mode {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundStyle(Color.accentColor)
+                        .font(.body)
+                }
+            }
+            .padding(.vertical, 6)
+        }
+        .buttonStyle(.plain)
+    }
+}
+
 struct GeneralSettingsSection: View {
 
     @ObservedObject var vm: SettingsViewModel
@@ -66,11 +113,11 @@ struct GeneralSettingsSection: View {
 
         }
 
-        Section("Behaviour") {
-            Picker("AI Persona", selection: $vm.persona) {
-                ForEach(PersonaType.allCases, id: \.self) { p in Text(p.label).tag(p) }
-            }
+        Section("Chat Mode") {
+            ChatModePicker(selected: $vm.persona)
+        }
 
+        Section("Behaviour") {
             Picker("Chat Memory", selection: $vm.chatMemory) {
                 ForEach(ChatMemoryMode.allCases, id: \.self) { m in Text(m.label).tag(m) }
             }

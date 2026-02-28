@@ -22,6 +22,12 @@ final class SettingsService {
         CacheStore.shared.get(.usage)
     }
 
+    // MARK: - Cache Management
+
+    func invalidateCache() {
+        CacheStore.shared.invalidate(.settings)
+    }
+
     // MARK: - Fetch (always hits network, then updates cache)
 
     func getSettings() async throws -> SettingsResponse {
