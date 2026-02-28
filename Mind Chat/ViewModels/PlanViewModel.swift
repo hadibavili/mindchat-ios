@@ -18,6 +18,13 @@ final class PlanViewModel: ObservableObject {
     // MARK: - Load
 
     func load() async {
+        // Phase 1: populate from disk cache instantly so plan/limits show correctly
+        // before any network round-trip (no spinner, no .free flash)
+        if let cached = settings.getCachedUsage() {
+            usage = cached
+        }
+
+        // Phase 2: fetch fresh from server, update + re-cache
         isLoading = true
         defer { isLoading = false }
         do {

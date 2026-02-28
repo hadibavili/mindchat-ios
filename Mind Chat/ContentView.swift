@@ -121,13 +121,13 @@ struct MainTabView: View {
                     Task { await chatVM.loadMessages(conversationId: convId) }
                 }
             }
-            if case .startChatWithTopic(let message) = event {
+            if case .startChatWithTopic(let topicId, let topicName, let factCount) = event {
                 showTopic = nil
                 showKnowledge = false
                 showConversationHistory = false
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
                     chatVM.newChat()
-                    chatVM.inputText = message
+                    chatVM.topicFocus = TopicFocus(id: topicId, name: topicName, factCount: factCount)
                 }
             }
         }

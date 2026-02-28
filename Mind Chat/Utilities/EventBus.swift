@@ -11,7 +11,7 @@ enum AppEvent: Sendable {
     case userSignedOut
     case emailVerified
     case navigateToMessage(conversationId: String, messageId: String)
-    case startChatWithTopic(message: String)
+    case startChatWithTopic(topicId: String, topicName: String, factCount: Int)
 }
 
 // MARK: - Event Bus

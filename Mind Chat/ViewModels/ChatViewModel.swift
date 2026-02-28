@@ -1,6 +1,14 @@
 import SwiftUI
 import Combine
 
+// MARK: - Topic Focus
+
+struct TopicFocus: Sendable {
+    let id: String
+    let name: String
+    let factCount: Int
+}
+
 // MARK: - Chat View Model
 
 @MainActor
@@ -26,6 +34,7 @@ final class ChatViewModel: ObservableObject {
     @Published var showScrollToBottom = false
     @Published var highlightMessageId: String?
     @Published var extractedTopics: [ExtractedTopic] = []
+    @Published var topicFocus: TopicFocus?
 
     // MARK: - Settings (loaded from server)
 
@@ -76,11 +85,15 @@ final class ChatViewModel: ObservableObject {
         guard !text.isEmpty || !pendingAttachments.isEmpty else { return }
         guard !isStreaming else { return }
 
+        // Capture topic focus before clearing state
+        let currentTopicFocus = topicFocus
+
         // Lock the UI immediately so the button can't be tapped again
         inputText       = ""
         attachments     = []
         extractedTopics = []
         errorMessage    = nil
+        topicFocus      = nil
         isStreaming     = true
         thinkingStart   = Date()
 
@@ -109,16 +122,24 @@ final class ChatViewModel: ObservableObject {
         var uploadedAttachments: [PendingAttachment] = []
         if !pendingAttachments.isEmpty {
             isUploading = true
+            var failedCount = 0
             for var att in pendingAttachments {
                 do {
                     let resp = try await upload.upload(attachment: att)
                     att.uploadedURL = resp.url
                     uploadedAttachments.append(att)
                 } catch {
-                    // Skip failed uploads
+                    failedCount += 1
                 }
             }
             isUploading = false
+            if failedCount > 0 {
+                // Block send if any uploads failed
+                isStreaming = false
+                thinkingStart = nil
+                errorMessage = "\(failedCount) file(s) failed to upload. Remove and retry."
+                return
+            }
         }
 
         streamTask = Task {
@@ -137,7 +158,8 @@ final class ChatViewModel: ObservableObject {
                     provider: provider,
                     model: model,
                     history: history,
-                    attachments: uploadedAttachments
+                    attachments: uploadedAttachments,
+                    topicId: currentTopicFocus?.id
                 )
 
                 for try await event in stream {
@@ -299,21 +321,46 @@ final class ChatViewModel: ObservableObject {
         attachments       = []
         extractedTopics   = []
         errorMessage      = nil
+        topicFocus        = nil
     }
 
     // MARK: - Settings
 
     func loadSettings() async {
-        guard let s = try? await SettingsService.shared.getSettings() else { return }
-        provider             = s.provider
-        model                = s.model
-        chatMemory           = s.chatMemory
-        plan                 = s.plan
-        showMemoryIndicators = s.showMemoryIndicators
-        // Load plan limits
-        if let usage = try? await SettingsService.shared.getUsage() {
+        let service = SettingsService.shared
+
+        // Phase 1: populate from disk cache synchronously (before first await)
+        // This runs instantly on cold launch, showing the correct plan/model/limits
+        // with zero network latency.
+        if let cached = service.getCachedSettings() {
+            provider             = cached.provider
+            model                = cached.model
+            chatMemory           = cached.chatMemory
+            plan                 = cached.plan
+            showMemoryIndicators = cached.showMemoryIndicators
+        }
+        if let cachedUsage = service.getCachedUsage() {
+            voiceEnabled        = cachedUsage.limits.voice
+            imageUploadsEnabled = cachedUsage.limits.imageUploads
+        }
+
+        // Phase 2: fetch fresh from server and update cache + UI in background
+        do {
+            let s = try await service.getSettings()
+            provider             = s.provider
+            model                = s.model
+            chatMemory           = s.chatMemory
+            plan                 = s.plan
+            showMemoryIndicators = s.showMemoryIndicators
+        } catch {
+            print("[ChatViewModel] loadSettings failed: \(error)")
+        }
+        do {
+            let usage = try await service.getUsage()
             voiceEnabled         = usage.limits.voice
             imageUploadsEnabled  = usage.limits.imageUploads
+        } catch {
+            print("[ChatViewModel] getUsage failed: \(error)")
         }
     }
 

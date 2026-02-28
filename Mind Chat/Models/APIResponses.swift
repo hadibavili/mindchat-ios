@@ -103,6 +103,26 @@ struct SettingsResponse: Codable, Sendable {
     let showMemoryIndicators: Bool
     let plan: PlanType
     let trialEndsAt: Date?
+
+    // Custom decoder: use defaults for any missing/unknown field so a single
+    // unexpected value doesn't blow up the entire settings load.
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        provider             = (try? c.decode(AIProvider.self,      forKey: .provider))      ?? .openai
+        model                = (try? c.decode(String.self,          forKey: .model))          ?? "gpt-4.1-mini"
+        apiKey               = try? c.decodeIfPresent(String.self,  forKey: .apiKey)
+        chatMemory           = (try? c.decode(ChatMemoryMode.self,  forKey: .chatMemory))     ?? .alwaysPersist
+        theme                = (try? c.decode(AppTheme.self,        forKey: .theme))          ?? .system
+        fontSize             = (try? c.decode(AppFontSize.self,     forKey: .fontSize))       ?? .medium
+        persona              = (try? c.decode(PersonaType.self,     forKey: .persona))        ?? .balanced
+        highContrast         = (try? c.decode(Bool.self,            forKey: .highContrast))   ?? false
+        accentColor          = (try? c.decode(String.self,          forKey: .accentColor))    ?? "black"
+        language             = (try? c.decode(String.self,          forKey: .language))       ?? "auto"
+        autoExtract          = (try? c.decode(Bool.self,            forKey: .autoExtract))    ?? true
+        showMemoryIndicators = (try? c.decode(Bool.self,            forKey: .showMemoryIndicators)) ?? true
+        plan                 = (try? c.decode(PlanType.self,        forKey: .plan))           ?? .free
+        trialEndsAt          = try? c.decodeIfPresent(Date.self,    forKey: .trialEndsAt)
+    }
 }
 
 struct UsageResponse: Codable, Sendable {
@@ -111,6 +131,15 @@ struct UsageResponse: Codable, Sendable {
     let trialEndsAt: Date?
     let trialExpired: Bool
     let usage: CurrentUsage
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        plan        = (try? c.decode(PlanType.self,     forKey: .plan))        ?? .free
+        limits      = (try? c.decode(UsageLimits.self,  forKey: .limits))      ?? UsageLimits()
+        trialEndsAt = try? c.decodeIfPresent(Date.self,                          forKey: .trialEndsAt)
+        trialExpired = (try? c.decode(Bool.self,        forKey: .trialExpired)) ?? false
+        usage       = (try? c.decode(CurrentUsage.self, forKey: .usage))       ?? CurrentUsage()
+    }
 }
 
 struct UsageLimits: Codable, Sendable {
@@ -124,6 +153,31 @@ struct UsageLimits: Codable, Sendable {
     let customPersonas: Bool
     let earlyAccess: Bool
     let webSearch: Bool
+
+    init(messagesPerDay: Int = 15, maxFacts: Int = 50, maxHistoryMessages: Int? = nil,
+         voice: Bool = false, imageUploads: Bool = false, customApiKeys: Bool = false,
+         priorityModels: Bool = false, customPersonas: Bool = false,
+         earlyAccess: Bool = false, webSearch: Bool = false) {
+        self.messagesPerDay = messagesPerDay; self.maxFacts = maxFacts
+        self.maxHistoryMessages = maxHistoryMessages; self.voice = voice
+        self.imageUploads = imageUploads; self.customApiKeys = customApiKeys
+        self.priorityModels = priorityModels; self.customPersonas = customPersonas
+        self.earlyAccess = earlyAccess; self.webSearch = webSearch
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        messagesPerDay      = (try? c.decode(Int.self,  forKey: .messagesPerDay))      ?? 15
+        maxFacts            = (try? c.decode(Int.self,  forKey: .maxFacts))            ?? 50
+        maxHistoryMessages  = try? c.decodeIfPresent(Int.self, forKey: .maxHistoryMessages)
+        voice               = (try? c.decode(Bool.self, forKey: .voice))               ?? false
+        imageUploads        = (try? c.decode(Bool.self, forKey: .imageUploads))        ?? false
+        customApiKeys       = (try? c.decode(Bool.self, forKey: .customApiKeys))       ?? false
+        priorityModels      = (try? c.decode(Bool.self, forKey: .priorityModels))      ?? false
+        customPersonas      = (try? c.decode(Bool.self, forKey: .customPersonas))      ?? false
+        earlyAccess         = (try? c.decode(Bool.self, forKey: .earlyAccess))         ?? false
+        webSearch           = (try? c.decode(Bool.self, forKey: .webSearch))           ?? false
+    }
 }
 
 // MARK: - Upload & Transcribe
@@ -217,6 +271,7 @@ struct ChatRequest: Codable, Sendable {
     let model: String?
     let history: [HistoryMessage]?
     let attachments: [AttachmentRef]?
+    let topicId: String?
 
     struct AttachmentRef: Codable, Sendable {
         let url: String

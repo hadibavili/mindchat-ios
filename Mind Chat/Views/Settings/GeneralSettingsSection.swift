@@ -63,15 +63,7 @@ struct GeneralSettingsSection: View {
                     .foregroundStyle(.secondary)
             }
 
-            VStack(alignment: .leading, spacing: 4) {
-                Toggle("High Contrast", isOn: $vm.highContrast)
-                    .onChange(of: vm.highContrast) { _, v in
-                        themeManager.highContrast = v
-                    }
-                Text("Increases text weight for improved readability.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
+
         }
 
         Section("Behaviour") {

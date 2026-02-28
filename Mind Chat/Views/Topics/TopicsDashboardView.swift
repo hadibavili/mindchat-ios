@@ -68,7 +68,7 @@ struct TopicsDashboardView: View {
                 }
                 .padding(.vertical)
             }
-            .navigationTitle("Topics")
+            .navigationTitle("Memory")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -95,7 +95,7 @@ struct StatPill: View {
 
     var body: some View {
         HStack(spacing: 8) {
-            Image(systemName: icon).foregroundStyle(Color.accentColor)
+            Image(systemName: icon).foregroundStyle(Color.mcTextLink)
             VStack(alignment: .leading, spacing: 0) {
                 Text("\(value)").font(.headline.bold())
                 Text(label).font(.caption).foregroundStyle(.secondary)
@@ -116,12 +116,16 @@ struct TopicsEmptyState: View {
         VStack(spacing: 20) {
             Image(systemName: "brain")
                 .font(.system(size: 64))
-                .foregroundStyle(Color.accentColor.opacity(0.5))
+                .foregroundStyle(Color.mcTextSecondary.opacity(0.5))
             Text("No memories yet")
                 .font(.title3.bold())
-            Text("Start a conversation and MindChat will automatically extract and organise your topics.")
+            Text("As you chat, everything you share gets organized into topics — not scattered across random threads.")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+            Text("Come back to any topic anytime for a focused conversation.")
+                .font(.caption)
+                .foregroundStyle(Color.mcTextTertiary)
                 .multilineTextAlignment(.center)
             HStack(spacing: 8) {
                 ForEach(["Memories", "Preferences", "Goals"], id: \.self) { pill in
@@ -129,8 +133,8 @@ struct TopicsEmptyState: View {
                         .font(.caption.bold())
                         .padding(.horizontal, 12)
                         .padding(.vertical, 6)
-                        .background(Color.accentColor.opacity(0.15))
-                        .foregroundStyle(Color.accentColor)
+                        .background(Color.mcTextLink.opacity(0.12))
+                        .foregroundStyle(Color.mcTextLink)
                         .clipShape(Capsule())
                 }
             }

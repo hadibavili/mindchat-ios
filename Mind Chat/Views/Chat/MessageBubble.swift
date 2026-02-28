@@ -46,68 +46,62 @@ struct MessageBubble: View {
                 if !message.content.isEmpty {
                     Text(message.content)
                         .font(.body)
-                        .foregroundStyle(Color.mcTextPrimary)
+                        .foregroundStyle(.white)
                         .padding(.horizontal, 16)
                         .padding(.vertical, 11)
-                        .background(Color.mcBgSecondary)
+                        .background(Color.accentColor)
                         .clipShape(RoundedRectangle(cornerRadius: 18))
                 }
             }
         }
     }
 
-    // MARK: - Assistant Bubble (clean full-width text, left-aligned with avatar)
+    // MARK: - Assistant Bubble (clean full-width text, left-aligned, no avatar)
 
     private var assistantBubble: some View {
-        HStack(alignment: .top, spacing: 10) {
-            AssistantAvatar()
-                .padding(.top, 2)
-
-            VStack(alignment: .leading, spacing: 6) {
-                if let attachments = message.attachments, !attachments.isEmpty {
-                    AttachmentGrid(attachments: attachments) { url in
-                        selectedImageURL = url
-                        showImageViewer = true
-                    }
-                }
-
-                if message.isError {
-                    HStack(spacing: 6) {
-                        Image(systemName: "exclamationmark.circle")
-                            .foregroundStyle(Color.accentRed)
-                        Text(message.content)
-                            .font(.body)
-                            .foregroundStyle(Color.accentRed)
-                    }
-                } else if message.content.isEmpty && message.isStreaming {
-                    EmptyView()
-                } else {
-                    MarkdownView(text: message.content)
-
-                    if message.isStreaming && !message.content.isEmpty {
-                        Text("●")
-                            .font(.caption)
-                            .foregroundStyle(Color.mcBorderDefault)
-                            .animation(.easeInOut(duration: 0.6).repeatForever(autoreverses: true), value: message.isStreaming)
-                    }
-                }
-
-                if let topics = message.streamingTopics, !topics.isEmpty {
-                    TopicPillsView(topics: topics)
-                }
-
-                if let sources = message.sources, !sources.isEmpty {
-                    SearchSourcesRow(sources: sources)
-                }
-
-                // Action bar (copy/regenerate) for completed assistant messages
-                if !message.isStreaming && !message.isError && !message.content.isEmpty {
-                    assistantActionBar
+        VStack(alignment: .leading, spacing: 6) {
+            if let attachments = message.attachments, !attachments.isEmpty {
+                AttachmentGrid(attachments: attachments) { url in
+                    selectedImageURL = url
+                    showImageViewer = true
                 }
             }
 
-            Spacer(minLength: 20)
+            if message.isError {
+                HStack(spacing: 6) {
+                    Image(systemName: "exclamationmark.circle")
+                        .foregroundStyle(Color.accentRed)
+                    Text(message.content)
+                        .font(.body)
+                        .foregroundStyle(Color.accentRed)
+                }
+            } else if message.content.isEmpty && message.isStreaming {
+                EmptyView()
+            } else {
+                MarkdownView(text: message.content)
+
+                if message.isStreaming && !message.content.isEmpty {
+                    Text("●")
+                        .font(.caption)
+                        .foregroundStyle(Color.mcBorderDefault)
+                        .animation(.easeInOut(duration: 0.6).repeatForever(autoreverses: true), value: message.isStreaming)
+                }
+            }
+
+            if let topics = message.streamingTopics, !topics.isEmpty {
+                TopicPillsView(topics: topics)
+            }
+
+            if let sources = message.sources, !sources.isEmpty {
+                SearchSourcesRow(sources: sources)
+            }
+
+            // Action bar (copy/regenerate) for completed assistant messages
+            if !message.isStreaming && !message.isError && !message.content.isEmpty {
+                assistantActionBar
+            }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     // MARK: - Assistant Action Bar

@@ -5,27 +5,53 @@ struct EmptyStateView: View {
     @ObservedObject var vm: ChatViewModel
     @EnvironmentObject private var appState: AppState
     @State private var appeared = false
+    @State private var greeting: String = ""
 
-    private var greeting: String {
+    private func pickGreeting() -> String {
         let hour = Calendar.current.component(.hour, from: Date())
         let firstName = appState.currentUser?.name?
             .components(separatedBy: " ").first ?? "there"
+        let pool: [String]
         switch hour {
-        case 5..<12:  return "Good morning, \(firstName)"
-        case 12..<17: return "Good afternoon, \(firstName)"
-        case 17..<21: return "Good evening, \(firstName)"
-        default:      return "Good night, \(firstName)"
+        case 5..<12:
+            pool = [
+                "Good morning, \(firstName)",
+                "Rise and shine, \(firstName)",
+                "Morning, \(firstName). What's on your mind?"
+            ]
+        case 12..<17:
+            pool = [
+                "Good afternoon, \(firstName)",
+                "Hey \(firstName), how's your day going?",
+                "What's up, \(firstName)?"
+            ]
+        case 17..<22:
+            pool = [
+                "Good evening, \(firstName)",
+                "Hey \(firstName), winding down?",
+                "Evening, \(firstName). What's on your mind?"
+            ]
+        default:
+            pool = [
+                "Still up, \(firstName)?",
+                "Late night, \(firstName)?",
+                "Hey \(firstName), can't sleep?"
+            ]
+        }
+        return pool.randomElement() ?? pool[0]
+    }
+
+    var body: some View {
+        if let focus = vm.topicFocus {
+            topicFocusState(focus: focus)
+        } else {
+            defaultGreetingState
         }
     }
 
-    private let suggestions: [(icon: String, text: String)] = [
-        ("lightbulb",                "What's on your mind?"),
-        ("brain",                    "What have I learned recently?"),
-        ("target",                   "Help me set a goal"),
-        ("doc.text.magnifyingglass", "Summarise a topic for me"),
-    ]
+    // MARK: - Default Greeting State
 
-    var body: some View {
+    private var defaultGreetingState: some View {
         VStack(spacing: 0) {
             Spacer()
 
@@ -34,10 +60,21 @@ struct EmptyStateView: View {
                 .font(.system(size: 26, weight: .bold))
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 24)
-                .padding(.bottom, 24)
+                .padding(.bottom, 10)
                 .opacity(appeared ? 1 : 0)
                 .offset(y: appeared ? 0 : 12)
                 .animation(.mcGentle, value: appeared)
+
+            // Subtitle
+            Text("I remember everything you've shared — just pick up where you left off.")
+                .font(.subheadline)
+                .foregroundStyle(Color.mcTextTertiary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 32)
+                .padding(.bottom, 24)
+                .opacity(appeared ? 1 : 0)
+                .offset(y: appeared ? 0 : 8)
+                .animation(.mcGentle.delay(0.05), value: appeared)
 
             // Memory mode banner
             MemoryModeBanner(mode: vm.chatMemory)
@@ -46,38 +83,54 @@ struct EmptyStateView: View {
 
             Spacer()
 
-            // Suggestion chips
-            LazyVGrid(
-                columns: [GridItem(.flexible()), GridItem(.flexible())],
-                spacing: 10
-            ) {
-                ForEach(Array(suggestions.enumerated()), id: \.element.text) { idx, item in
-                    Button { vm.useSuggestion(item.text) } label: {
-                        HStack(alignment: .top, spacing: 10) {
-                            Image(systemName: item.icon)
-                                .font(.system(size: 15))
-                                .foregroundStyle(Color.accentColor)
-                                .padding(.top, 1)
-                            Text(item.text)
-                                .font(.subheadline)
-                                .foregroundStyle(.primary)
-                                .multilineTextAlignment(.leading)
-                                .fixedSize(horizontal: false, vertical: true)
-                            Spacer()
-                        }
-                        .padding(14)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(Color.mcBgSecondary)
-                        .clipShape(RoundedRectangle(cornerRadius: 16))
-                    }
-                    .buttonStyle(CardPressStyle())
+            // Upgrade card for free users
+            if vm.plan == .free {
+                UpgradeBannerCard(onTap: {})
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 20)
                     .opacity(appeared ? 1 : 0)
-                    .offset(y: appeared ? 0 : 16)
-                    .animation(.mcGentle.delay(0.1 + Double(idx) * 0.07), value: appeared)
-                }
+                    .animation(.mcGentle.delay(0.1), value: appeared)
             }
-            .padding(.horizontal, 16)
-            .padding(.bottom, 20)
+        }
+        .onAppear {
+            greeting = pickGreeting()
+            appeared = true
+        }
+    }
+
+    // MARK: - Topic Focus State
+
+    private func topicFocusState(focus: TopicFocus) -> some View {
+        VStack(spacing: 16) {
+            Spacer()
+
+            ZStack {
+                Circle()
+                    .fill(Color.mcTextLink.opacity(0.1))
+                    .frame(width: 72, height: 72)
+                Image(systemName: "bubble.left.and.bubble.right")
+                    .font(.system(size: 28, weight: .medium))
+                    .foregroundStyle(Color.mcTextLink)
+            }
+            .opacity(appeared ? 1 : 0)
+            .scaleEffect(appeared ? 1 : 0.8)
+            .animation(.mcGentle, value: appeared)
+
+            Text("Ready to talk about \(focus.name)")
+                .font(.system(size: 22, weight: .bold))
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 32)
+                .opacity(appeared ? 1 : 0)
+                .offset(y: appeared ? 0 : 10)
+                .animation(.mcGentle.delay(0.05), value: appeared)
+
+            Text(focus.factCount > 0 ? "\(focus.factCount) memories loaded" : "Ask me anything")
+                .font(.subheadline)
+                .foregroundStyle(Color.mcTextTertiary)
+                .opacity(appeared ? 1 : 0)
+                .animation(.mcGentle.delay(0.1), value: appeared)
+
+            Spacer()
         }
         .onAppear { appeared = true }
     }
@@ -128,10 +181,10 @@ struct MemoryModeBanner: View {
 
     private var icon: String {
         switch mode {
-        case .alwaysPersist:   return "memorychip"
+        case .alwaysPersist:    return "memorychip"
         case .persistClearable: return "memorychip"
-        case .fresh:           return "arrow.counterclockwise"
-        case .extractOnly:     return "brain"
+        case .fresh:            return "arrow.counterclockwise"
+        case .extractOnly:      return "brain"
         }
     }
 
@@ -148,7 +201,7 @@ struct MemoryModeBanner: View {
         HStack(spacing: 10) {
             Image(systemName: icon)
                 .font(.caption)
-                .foregroundStyle(Color.accentColor)
+                .foregroundStyle(Color.mcTextLink)
             Text(description)
                 .font(.caption)
                 .foregroundStyle(.secondary)
@@ -156,7 +209,7 @@ struct MemoryModeBanner: View {
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 8)
-        .background(Color.accentColor.opacity(0.07))
+        .background(Color.mcTextLink.opacity(0.07))
         .clipShape(RoundedRectangle(cornerRadius: 10))
     }
 }

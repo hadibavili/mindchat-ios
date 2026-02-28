@@ -10,8 +10,24 @@ final class SettingsService {
 
     private init() {}
 
+    // MARK: - Cache Accessors
+
+    /// Returns the last-cached settings without hitting the network (nil if cold or expired).
+    func getCachedSettings() -> SettingsResponse? {
+        CacheStore.shared.get(.settings)
+    }
+
+    /// Returns the last-cached usage response without hitting the network (nil if cold or expired).
+    func getCachedUsage() -> UsageResponse? {
+        CacheStore.shared.get(.usage)
+    }
+
+    // MARK: - Fetch (always hits network, then updates cache)
+
     func getSettings() async throws -> SettingsResponse {
-        return try await api.request("/api/settings")
+        let response: SettingsResponse = try await api.request("/api/settings")
+        CacheStore.shared.set(.settings, value: response)
+        return response
     }
 
     func updateSettings(_ update: SettingsUpdateRequest) async throws {
@@ -20,9 +36,13 @@ final class SettingsService {
             method: "PUT",
             body: update
         )
+        // Invalidate so the next load fetches fresh data from the server
+        CacheStore.shared.invalidate(.settings)
     }
 
     func getUsage() async throws -> UsageResponse {
-        return try await api.request("/api/usage")
+        let response: UsageResponse = try await api.request("/api/usage")
+        CacheStore.shared.set(.usage, value: response)
+        return response
     }
 }

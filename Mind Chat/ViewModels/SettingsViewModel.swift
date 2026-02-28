@@ -23,88 +23,63 @@ final class SettingsViewModel: ObservableObject {
     @Published var plan:         PlanType      = .free
     @Published var trialEndsAt:  Date?         = nil
 
-    @Published var isLoading   = false
-    @Published var isSaving    = false
+    @Published var isLoading    = false
+    @Published var isSaving     = false
+    @Published var saveSuccess  = false
 
     private let settingsService = SettingsService.shared
     var themeManager: ThemeManager?
 
-    private var hasLoaded = false
-    private var autoSaveTask: Task<Void, Never>?
-    private var cancellables = Set<AnyCancellable>()
-
     init(themeManager: ThemeManager? = nil) {
         self.themeManager = themeManager
-        setupAutoSave()
-    }
-
-    // MARK: - Auto-Save
-
-    private func setupAutoSave() {
-        let triggers: [AnyPublisher<Void, Never>] = [
-            $provider.map { _ in }.eraseToAnyPublisher(),
-            $model.map { _ in }.eraseToAnyPublisher(),
-            $apiKey.map { _ in }.eraseToAnyPublisher(),
-            $chatMemory.map { _ in }.eraseToAnyPublisher(),
-            $theme.map { _ in }.eraseToAnyPublisher(),
-            $fontSize.map { _ in }.eraseToAnyPublisher(),
-            $persona.map { _ in }.eraseToAnyPublisher(),
-            $highContrast.map { _ in }.eraseToAnyPublisher(),
-            $accentColor.map { _ in }.eraseToAnyPublisher(),
-            $language.map { _ in }.eraseToAnyPublisher(),
-            $autoExtract.map { _ in }.eraseToAnyPublisher(),
-            $showMemoryIndicators.map { _ in }.eraseToAnyPublisher(),
-        ]
-        Publishers.MergeMany(triggers)
-            .sink { [weak self] _ in self?.scheduleAutoSave() }
-            .store(in: &cancellables)
-    }
-
-    private func scheduleAutoSave() {
-        guard hasLoaded else { return }
-        autoSaveTask?.cancel()
-        autoSaveTask = Task { [weak self] in
-            try? await Task.sleep(nanoseconds: 800_000_000)
-            guard !Task.isCancelled else { return }
-            await self?.save()
-        }
     }
 
     // MARK: - Load
 
     func load() async {
-        isLoading = true
+        // Phase 1: populate from disk cache instantly — no spinner, no network wait
+        if let cached = settingsService.getCachedSettings() {
+            applySettings(cached)
+        }
+
+        // Phase 2: fetch fresh from server; only show spinner if cache was cold
+        let hadCache = settingsService.getCachedSettings() != nil
+        if !hadCache { isLoading = true }
         defer { isLoading = false }
         do {
             let s = try await settingsService.getSettings()
-            provider     = s.provider
-            model        = s.model
-            apiKey       = s.apiKey ?? ""
-            chatMemory   = s.chatMemory
-            persona      = s.persona
-            language     = s.language
-            autoExtract  = s.autoExtract
-            showMemoryIndicators = s.showMemoryIndicators
-            plan         = s.plan
-            trialEndsAt  = s.trialEndsAt
-            // Theme settings: read from ThemeManager (UserDefaults) not from server.
-            // Server may have a stale value; the local preference is authoritative.
-            if let tm = themeManager {
-                theme        = tm.colorScheme
-                fontSize     = tm.fontSize
-                highContrast = tm.highContrast
-                accentColor  = tm.accentColorId
-            } else {
-                theme        = s.theme
-                fontSize     = s.fontSize
-                highContrast = s.highContrast
-                accentColor  = s.accentColor
-            }
-            hasLoaded = true
+            applySettings(s)
         } catch let e as AppError {
             ToastManager.shared.error(e.errorDescription ?? "Failed to load settings")
         } catch {
             ToastManager.shared.error(error.localizedDescription)
+        }
+    }
+
+    /// Applies a SettingsResponse to all published properties.
+    private func applySettings(_ s: SettingsResponse) {
+        provider             = s.provider
+        model                = s.model
+        apiKey               = s.apiKey ?? ""
+        chatMemory           = s.chatMemory
+        persona              = s.persona
+        language             = s.language
+        autoExtract          = s.autoExtract
+        showMemoryIndicators = s.showMemoryIndicators
+        plan                 = s.plan
+        trialEndsAt          = s.trialEndsAt
+        // Theme settings: read from ThemeManager (UserDefaults) not from server.
+        // Server may have a stale value; the local preference is authoritative.
+        if let tm = themeManager {
+            theme        = tm.colorScheme
+            fontSize     = tm.fontSize
+            highContrast = tm.highContrast
+            accentColor  = tm.accentColorId
+        } else {
+            theme        = s.theme
+            fontSize     = s.fontSize
+            highContrast = s.highContrast
+            accentColor  = s.accentColor
         }
     }
 
@@ -129,6 +104,11 @@ final class SettingsViewModel: ObservableObject {
                 showMemoryIndicators: showMemoryIndicators
             )
             try await settingsService.updateSettings(update)
+            saveSuccess = true
+            Task {
+                try? await Task.sleep(nanoseconds: 2_000_000_000)
+                saveSuccess = false
+            }
         } catch let e as AppError {
             ToastManager.shared.error(e.errorDescription ?? "Failed to save settings")
         } catch {

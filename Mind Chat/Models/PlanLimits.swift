@@ -27,10 +27,9 @@ let PLAN_LIMITS: [PlanType: PlanLimits] = [
         earlyAccess: false,
         webSearch: false,
         models: [
-            "gpt-5-nano", "gpt-4.1-mini", "gpt-4.1-nano",
-            "claude-haiku-4-5-20251001", "claude-3-5-haiku-20241022",
-            "gemini-2.5-flash", "gemini-2.0-flash",
-            "grok-3-mini"
+            "gpt-5-nano", "gpt-4.1-mini",
+            "claude-haiku-4-5-20251001",
+            "gemini-2.5-flash"
         ]
     ),
     .trial: PlanLimits(
@@ -44,12 +43,12 @@ let PLAN_LIMITS: [PlanType: PlanLimits] = [
         earlyAccess: false,
         webSearch: true,
         models: [
-            "gpt-5-nano", "gpt-4.1-mini", "gpt-4.1-nano",
-            "gpt-5-mini", "gpt-4.1", "o4-mini", "gpt-4o",
-            "claude-haiku-4-5-20251001", "claude-3-5-haiku-20241022",
-            "claude-sonnet-4-5", "claude-sonnet-4-20250514",
-            "gemini-2.5-flash", "gemini-2.0-flash", "gemini-2.5-pro",
-            "grok-3-mini", "grok-3"
+            "gpt-5-nano", "gpt-4.1-mini",
+            "gpt-5-mini", "gpt-4.1", "o4-mini",
+            "claude-haiku-4-5-20251001",
+            "claude-sonnet-4-6", "claude-sonnet-4-5",
+            "gemini-2.5-flash",
+            "gemini-3-flash-preview", "gemini-2.5-pro"
         ]
     ),
     .pro: PlanLimits(
@@ -63,12 +62,12 @@ let PLAN_LIMITS: [PlanType: PlanLimits] = [
         earlyAccess: false,
         webSearch: true,
         models: [
-            "gpt-5-nano", "gpt-4.1-mini", "gpt-4.1-nano",
-            "gpt-5-mini", "gpt-4.1", "o4-mini", "gpt-4o",
-            "claude-haiku-4-5-20251001", "claude-3-5-haiku-20241022",
-            "claude-sonnet-4-5", "claude-sonnet-4-20250514",
-            "gemini-2.5-flash", "gemini-2.0-flash", "gemini-2.5-pro",
-            "grok-3-mini", "grok-3"
+            "gpt-5-nano", "gpt-4.1-mini",
+            "gpt-5-mini", "gpt-4.1", "o4-mini",
+            "claude-haiku-4-5-20251001",
+            "claude-sonnet-4-6", "claude-sonnet-4-5",
+            "gemini-2.5-flash",
+            "gemini-3-flash-preview", "gemini-2.5-pro"
         ]
     ),
     .premium: PlanLimits(
@@ -82,14 +81,15 @@ let PLAN_LIMITS: [PlanType: PlanLimits] = [
         earlyAccess: true,
         webSearch: true,
         models: [
-            "gpt-5-nano", "gpt-4.1-mini", "gpt-4.1-nano",
-            "gpt-5-mini", "gpt-4.1", "o4-mini", "gpt-4o",
-            "gpt-5.1", "o3",
-            "claude-haiku-4-5-20251001", "claude-3-5-haiku-20241022",
-            "claude-sonnet-4-5", "claude-sonnet-4-20250514",
-            "claude-opus-4-5", "claude-opus-4-6",
-            "gemini-2.5-flash", "gemini-2.0-flash", "gemini-2.5-pro",
-            "grok-3-mini", "grok-3"
+            "gpt-5-nano", "gpt-4.1-mini",
+            "gpt-5-mini", "gpt-4.1", "o4-mini",
+            "gpt-5.2", "gpt-5.1", "o3",
+            "claude-haiku-4-5-20251001",
+            "claude-sonnet-4-6", "claude-sonnet-4-5",
+            "claude-opus-4-6",
+            "gemini-2.5-flash",
+            "gemini-3-flash-preview", "gemini-2.5-pro",
+            "gemini-3.1-pro-preview"
         ]
     )
 ]
@@ -101,6 +101,7 @@ struct ModelOption: Identifiable, Sendable {
     let label: String
     let provider: AIProvider
     let tier: ModelTier   // "free" | "pro" | "premium"
+    var comingSoon: Bool = false
 }
 
 enum ModelTier: String, Sendable, Comparable {
@@ -125,33 +126,33 @@ let MODEL_OPTIONS: [ModelOption] = [
     // OpenAI — free tier
     ModelOption(id: "gpt-5-nano",    label: "GPT-5 Nano",    provider: .openai, tier: .free),
     ModelOption(id: "gpt-4.1-mini",  label: "GPT-4.1 Mini",  provider: .openai, tier: .free),
-    ModelOption(id: "gpt-4.1-nano",  label: "GPT-4.1 Nano",  provider: .openai, tier: .free),
     // OpenAI — pro tier
     ModelOption(id: "gpt-5-mini",    label: "GPT-5 Mini",    provider: .openai, tier: .pro),
     ModelOption(id: "gpt-4.1",       label: "GPT-4.1",       provider: .openai, tier: .pro),
     ModelOption(id: "o4-mini",       label: "O4 Mini",       provider: .openai, tier: .pro),
-    ModelOption(id: "gpt-4o",        label: "GPT-4o",        provider: .openai, tier: .pro),
     // OpenAI — premium tier
+    ModelOption(id: "gpt-5.2",       label: "GPT-5.2",       provider: .openai, tier: .premium),
     ModelOption(id: "gpt-5.1",       label: "GPT-5.1",       provider: .openai, tier: .premium),
     ModelOption(id: "o3",            label: "O3",            provider: .openai, tier: .premium),
     // Anthropic — free tier
-    ModelOption(id: "claude-haiku-4-5-20251001",   label: "Claude Haiku 4.5", provider: .claude, tier: .free),
-    ModelOption(id: "claude-3-5-haiku-20241022",   label: "Claude Haiku 3.5", provider: .claude, tier: .free),
+    ModelOption(id: "claude-haiku-4-5-20251001",   label: "Claude Haiku 4.5",  provider: .claude, tier: .free),
     // Anthropic — pro tier
+    ModelOption(id: "claude-sonnet-4-6",           label: "Claude Sonnet 4.6", provider: .claude, tier: .pro),
     ModelOption(id: "claude-sonnet-4-5",           label: "Claude Sonnet 4.5", provider: .claude, tier: .pro),
-    ModelOption(id: "claude-sonnet-4-20250514",    label: "Claude Sonnet 4",   provider: .claude, tier: .pro),
     // Anthropic — premium tier
-    ModelOption(id: "claude-opus-4-5",             label: "Claude Opus 4.5",   provider: .claude, tier: .premium),
     ModelOption(id: "claude-opus-4-6",             label: "Claude Opus 4.6",   provider: .claude, tier: .premium),
     // Google — free tier
-    ModelOption(id: "gemini-2.5-flash",  label: "Gemini 2.5 Flash",  provider: .google, tier: .free),
-    ModelOption(id: "gemini-2.0-flash",  label: "Gemini 2.0 Flash",  provider: .google, tier: .free),
+    ModelOption(id: "gemini-2.5-flash",        label: "Gemini 2.5 Flash",  provider: .google, tier: .free),
     // Google — pro tier
-    ModelOption(id: "gemini-2.5-pro",    label: "Gemini 2.5 Pro",    provider: .google, tier: .pro),
-    // xAI — free tier
-    ModelOption(id: "grok-3-mini",       label: "Grok 3 Mini",       provider: .xai,    tier: .free),
-    // xAI — pro tier
-    ModelOption(id: "grok-3",            label: "Grok 3",            provider: .xai,    tier: .pro),
+    ModelOption(id: "gemini-3-flash-preview",  label: "Gemini 3 Flash",    provider: .google, tier: .pro),
+    ModelOption(id: "gemini-2.5-pro",          label: "Gemini 2.5 Pro",    provider: .google, tier: .pro),
+    // Google — premium tier
+    ModelOption(id: "gemini-3.1-pro-preview",  label: "Gemini 3.1 Pro",    provider: .google, tier: .premium),
+    // xAI — free tier (coming soon)
+    ModelOption(id: "grok-3-mini",             label: "Grok 3 Mini",       provider: .xai, tier: .free,    comingSoon: true),
+    // xAI — pro tier (coming soon)
+    ModelOption(id: "grok-4-1-fast-reasoning", label: "Grok 4.1 Fast",     provider: .xai, tier: .pro,     comingSoon: true),
+    ModelOption(id: "grok-3",                  label: "Grok 3",            provider: .xai, tier: .pro,     comingSoon: true),
 ]
 
 // MARK: - Plan → Accessible Model Tiers
@@ -184,10 +185,10 @@ let PROVIDER_LABELS: [AIProvider: String] = [
 // MARK: - Provider Helper Text
 
 let PROVIDER_HELPER_TEXT: [AIProvider: String] = [
-    .openai: "GPT-4.1 Mini is recommended for free tier. Upgrade for GPT-4.1 and GPT-5.1.",
+    .openai: "GPT-4.1 Mini is recommended for free tier. Upgrade for GPT-4.1 and GPT-5.",
     .claude: "Haiku 4.5 is recommended for free tier. Upgrade for Sonnet and Opus.",
-    .google: "Gemini 2.5 Flash is fast and capable. Upgrade for Gemini 2.5 Pro.",
-    .xai:    "Grok 3 Mini is fast and capable. Upgrade for Grok 3."
+    .google: "Gemini 2.5 Flash is fast and capable. Upgrade for Gemini 3.",
+    .xai:    "xAI models are coming soon."
 ]
 
 // MARK: - API Key Placeholders

@@ -84,7 +84,7 @@ struct TopicDetailView: View {
                     } label: {
                         Label("Move to another topic…", systemImage: "arrow.triangle.merge")
                             .font(.subheadline)
-                            .foregroundStyle(Color.accentColor)
+                            .foregroundStyle(Color.mcTextLink)
                     }
                     .padding()
 
@@ -132,7 +132,7 @@ struct TopicHeaderView: View {
             }
 
             Button {
-                EventBus.shared.publish(.startChatWithTopic(message: "Let's talk about \(topic.name)"))
+                EventBus.shared.publish(.startChatWithTopic(topicId: topic.id, topicName: topic.name, factCount: topic.factCount))
             } label: {
                 Text("Let's talk about \(topic.name)")
                     .font(.subheadline.bold())

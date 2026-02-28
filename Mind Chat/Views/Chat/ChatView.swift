@@ -32,6 +32,11 @@ struct ChatView: View {
                                 .containerRelativeFrame(.vertical)
                         }
 
+                        // Top padding before first message
+                        if !vm.messages.isEmpty {
+                            Color.clear.frame(height: 20)
+                        }
+
                         ForEach(Array(vm.messages.enumerated()), id: \.element.id) { idx, message in
                             let prevDate = idx > 0 ? vm.messages[idx - 1].createdAt : nil
                             if shouldShowSeparator(current: message.createdAt, previous: prevDate) {
@@ -71,7 +76,7 @@ struct ChatView: View {
                                 Spacer()
                                 Button("Retry") { Task { await vm.send() } }
                                     .font(.caption.bold())
-                                    .foregroundStyle(Color.accentColor)
+                                    .foregroundStyle(Color.mcTextLink)
                             }
                             .padding(.horizontal, 16)
                             .padding(.vertical, 8)
@@ -128,7 +133,7 @@ struct ChatView: View {
                     UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
                     withAnimation(.easeOut(duration: 0.25)) { showSidebar.toggle() }
                 } label: {
-                    Image(systemName: "sidebar.left")
+                    Image(systemName: "line.3.horizontal")
                         .font(.system(size: 18))
                 }
             }
@@ -241,18 +246,13 @@ struct ThinkingBubble: View {
     @State private var timer: Timer?
 
     var body: some View {
-        HStack(alignment: .top, spacing: 10) {
-            AssistantAvatar()
-                .padding(.top, 2)
-            HStack(spacing: 6) {
-                ProgressView()
-                    .scaleEffect(0.7)
-                    .tint(.secondary)
-                Text("MindChat is thinking… \(elapsed)s")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-            .padding(.top, 6)
+        HStack(spacing: 6) {
+            ProgressView()
+                .scaleEffect(0.7)
+                .tint(.secondary)
+            Text("MindChat is thinking… \(elapsed)s")
+                .font(.caption)
+                .foregroundStyle(.secondary)
             Spacer()
         }
         .onAppear {
@@ -271,36 +271,19 @@ struct SearchingIndicator: View {
     @State private var animating = false
 
     var body: some View {
-        HStack(alignment: .top, spacing: 10) {
-            AssistantAvatar()
-            HStack(spacing: 6) {
-                Image(systemName: "globe")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .rotationEffect(.degrees(animating ? 360 : 0))
-                    .animation(.linear(duration: 1.5).repeatForever(autoreverses: false), value: animating)
-                Text("Searching the web…")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-            .padding(.top, 6)
+        HStack(spacing: 6) {
+            Image(systemName: "globe")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .rotationEffect(.degrees(animating ? 360 : 0))
+                .animation(.linear(duration: 1.5).repeatForever(autoreverses: false), value: animating)
+            Text("Searching the web…")
+                .font(.caption)
+                .foregroundStyle(.secondary)
             Spacer()
         }
         .onAppear { animating = true }
     }
 }
 
-// MARK: - Assistant Avatar
 
-struct AssistantAvatar: View {
-    var body: some View {
-        ZStack {
-            Circle()
-                .fill(Color.mcBgHover)
-                .frame(width: 28, height: 28)
-            Image(systemName: "brain")
-                .font(.system(size: 13, weight: .medium))
-                .foregroundStyle(.primary)
-        }
-    }
-}

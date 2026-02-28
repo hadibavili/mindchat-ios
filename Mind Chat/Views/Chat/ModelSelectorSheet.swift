@@ -17,7 +17,7 @@ struct ModelSelectorSheet: View {
                     if let models = modelsByProvider[provider] {
                         Section(PROVIDER_LABELS[provider] ?? provider.rawValue) {
                             ForEach(models) { option in
-                                let isLocked = !(PLAN_MODEL_ACCESS[plan]?.contains(option.id) ?? false)
+                                let isLocked = option.comingSoon || !(PLAN_MODEL_ACCESS[plan]?.contains(option.id) ?? false)
                                 Button {
                                     guard !isLocked else { return }
                                     vm.model    = option.id
@@ -25,7 +25,12 @@ struct ModelSelectorSheet: View {
                                     EventBus.shared.publish(.modelChanged(provider: option.provider, model: option.id))
                                     dismiss()
                                 } label: {
-                                    HStack {
+                                    HStack(spacing: 10) {
+                                        // Provider color dot
+                                        Circle()
+                                            .fill(providerColor(option.provider))
+                                            .frame(width: 8, height: 8)
+
                                         VStack(alignment: .leading, spacing: 2) {
                                             Text(option.label)
                                                 .foregroundStyle(isLocked ? .secondary : .primary)
@@ -34,14 +39,18 @@ struct ModelSelectorSheet: View {
                                                 .foregroundStyle(.secondary)
                                         }
                                         Spacer()
-                                        TierBadge(tier: option.tier)
-                                        if isLocked {
+                                        if option.comingSoon {
+                                            SoonBadge()
+                                        } else {
+                                            TierBadge(tier: option.tier)
+                                        }
+                                        if isLocked && !option.comingSoon {
                                             Image(systemName: "lock.fill")
                                                 .font(.caption)
                                                 .foregroundStyle(.secondary)
                                         } else if vm.model == option.id {
                                             Image(systemName: "checkmark")
-                                                .foregroundStyle(Color.accentColor)
+                                                .foregroundStyle(Color.mcTextLink)
                                         }
                                     }
                                 }
@@ -49,6 +58,14 @@ struct ModelSelectorSheet: View {
                             }
                         }
                     }
+                }
+
+                // Footer
+                Section {
+                    Text("Your memory carries over — switch models anytime without losing context.")
+                        .font(.caption)
+                        .foregroundStyle(Color.mcTextTertiary)
+                        .listRowBackground(Color.clear)
                 }
             }
             .navigationTitle("Select Model")
@@ -63,6 +80,15 @@ struct ModelSelectorSheet: View {
                     plan = s.plan
                 }
             }
+        }
+    }
+
+    private func providerColor(_ provider: AIProvider) -> Color {
+        switch provider {
+        case .openai: return Color.providerOpenAI
+        case .claude: return Color.providerClaude
+        case .google: return Color.providerGoogle
+        case .xai:    return Color.providerXAI
         }
     }
 }
@@ -87,5 +113,17 @@ struct TierBadge: View {
         case .pro:     return .blue
         case .premium: return .purple
         }
+    }
+}
+
+struct SoonBadge: View {
+    var body: some View {
+        Text("Soon")
+            .font(.caption2.bold())
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2)
+            .background(Color.mcTextTertiary.opacity(0.15))
+            .foregroundStyle(Color.mcTextTertiary)
+            .clipShape(Capsule())
     }
 }

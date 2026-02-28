@@ -131,9 +131,22 @@ final class APIClient {
 
         switch http.statusCode {
         case 200...299:
+            // Detect HTML redirect masquerading as 200 (server returns login page for unauth requests)
+            let contentType = http.value(forHTTPHeaderField: "Content-Type") ?? ""
+            if contentType.contains("text/html") {
+                throw AppError.unauthorized
+            }
+            // Also catch HTML body even if Content-Type header is missing/wrong
+            if let prefix = String(data: data.prefix(20), encoding: .utf8),
+               prefix.lowercased().hasPrefix("<!doctype") || prefix.lowercased().hasPrefix("<html") {
+                throw AppError.unauthorized
+            }
             do {
                 return try JSONDecoder.mindChat.decode(T.self, from: data)
             } catch {
+                let rawBody = String(data: data.prefix(2000), encoding: .utf8) ?? "<non-utf8>"
+                print("[APIClient] Decode error for \(T.self): \(error)")
+                print("[APIClient] Raw body: \(rawBody)")
                 throw AppError.decodingError(error.localizedDescription)
             }
         case 401:

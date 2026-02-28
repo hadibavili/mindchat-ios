@@ -473,6 +473,11 @@ struct UsageStats: Codable, Sendable {
 struct CurrentUsage: Codable, Sendable {
     let messagesUsedToday: Int
     let totalFacts: Int
+
+    init(messagesUsedToday: Int = 0, totalFacts: Int = 0) {
+        self.messagesUsedToday = messagesUsedToday
+        self.totalFacts = totalFacts
+    }
 }
 
 struct PlanLimitValues: Codable, Sendable {

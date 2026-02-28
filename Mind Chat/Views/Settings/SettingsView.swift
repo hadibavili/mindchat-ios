@@ -27,6 +27,34 @@ struct SettingsView: View {
                 }
 
                 AccountSection(appState: appState)
+
+                // Save Button
+                Section {
+                    Button {
+                        Task { await vm.save() }
+                    } label: {
+                        HStack {
+                            Spacer()
+                            if vm.isSaving {
+                                HStack(spacing: 8) {
+                                    ProgressView()
+                                        .scaleEffect(0.85)
+                                    Text("Saving…")
+                                        .fontWeight(.semibold)
+                                }
+                            } else if vm.saveSuccess {
+                                Label("Saved", systemImage: "checkmark.circle.fill")
+                                    .foregroundStyle(Color.accentGreen)
+                                    .fontWeight(.semibold)
+                            } else {
+                                Text("Save changes")
+                                    .fontWeight(.semibold)
+                            }
+                            Spacer()
+                        }
+                    }
+                    .disabled(vm.isSaving)
+                }
             }
             .navigationTitle("Settings")
             .onAppear {

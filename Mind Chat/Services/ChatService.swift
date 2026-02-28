@@ -18,7 +18,8 @@ final class ChatService {
         provider: AIProvider,
         model: String,
         history: [HistoryMessage] = [],
-        attachments: [PendingAttachment] = []
+        attachments: [PendingAttachment] = [],
+        topicId: String? = nil
     ) async throws -> AsyncThrowingStream<SSEEvent, Error> {
         let attachmentRefs = attachments.compactMap { att -> ChatRequest.AttachmentRef? in
             guard let url = att.uploadedURL else { return nil }
@@ -35,7 +36,8 @@ final class ChatService {
             provider: provider,
             model: model,
             history: history.isEmpty ? nil : history,
-            attachments: attachmentRefs.isEmpty ? nil : attachmentRefs
+            attachments: attachmentRefs.isEmpty ? nil : attachmentRefs,
+            topicId: topicId
         )
         let bytes = try await api.sseRequest("/api/chat", body: body)
         return SSEParser.parse(bytes)
