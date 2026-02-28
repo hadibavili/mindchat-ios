@@ -12,15 +12,25 @@ struct SSEParser {
 
     static func parse(_ bytes: URLSession.AsyncBytes) -> AsyncThrowingStream<SSEEvent, Error> {
         AsyncThrowingStream { continuation in
-            Task.detached(priority: .userInitiated) {
+            // Run the byte loop in a plain (non-detached) Task so it inherits the
+            // caller's task priority but does NOT hold the @MainActor lock.
+            // AsyncThrowingStream's closure runs outside any actor context.
+            Task {
                 do {
+                    var lineCount = 0
                     for try await line in bytes.lines {
+                        lineCount += 1
+                        // Log every raw line (trim to 120 chars to avoid log spam on long tokens)
+                        let preview = line.count > 120 ? String(line.prefix(120)) + "…" : line
+                        print("[SSEParser] line \(lineCount): \(preview)")
+
                         guard line.hasPrefix("data:") else { continue }
 
                         let payload = String(line.dropFirst("data:".count))
                             .trimmingCharacters(in: .whitespaces)
 
                         if payload == "[DONE]" {
+                            print("[SSEParser] [DONE] received")
                             continuation.yield(.done)
                             continuation.finish()
                             return
@@ -29,11 +39,15 @@ struct SSEParser {
                         if let event = parseJSON(payload) {
                             continuation.yield(event)
                             if case .done = event {
+                                print("[SSEParser] done event parsed")
                                 continuation.finish()
                                 return
                             }
+                        } else {
+                            print("[SSEParser] WARNING — could not parse payload: \(payload.prefix(120))")
                         }
                     }
+                    print("[SSEParser] bytes.lines exhausted after \(lineCount) lines")
                     continuation.finish()
                 } catch {
                     continuation.finish(throwing: error)

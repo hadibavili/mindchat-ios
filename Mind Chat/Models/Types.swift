@@ -278,10 +278,17 @@ struct MessageAttachment: Codable, Identifiable, Sendable {
     let name: String
     let type: AttachmentKind
     let mimeType: String?
+    /// Local JPEG data available for optimistic messages — not persisted/encoded.
+    var localImageData: Data?
 
     enum AttachmentKind: String, Codable, Sendable {
         case image
         case file
+    }
+
+    // Exclude localImageData from Codable so it never hits the wire or breaks decoding.
+    enum CodingKeys: String, CodingKey {
+        case id, url, name, type, mimeType
     }
 }
 

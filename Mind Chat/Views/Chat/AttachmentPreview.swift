@@ -9,10 +9,9 @@ struct AttachmentPreview: View {
             HStack(spacing: 8) {
                 ForEach(attachments) { att in
                     ZStack(alignment: .topTrailing) {
-                        if att.kind == .image, let data = att.data, let uiImage = UIImage(data: data) {
-                            Image(uiImage: uiImage)
-                                .resizable()
-                                .scaledToFill()
+                        if att.kind == .image {
+                            // Decode image data off the main thread
+                            AsyncThumbnail(data: att.data)
                                 .frame(width: 72, height: 72)
                                 .clipShape(RoundedRectangle(cornerRadius: 10))
                         } else {
@@ -28,7 +27,7 @@ struct AttachmentPreview: View {
                             .clipShape(RoundedRectangle(cornerRadius: 10))
                         }
 
-                        // Remove button — sits outside the thumbnail corner
+                        // Remove button
                         Button {
                             attachments.removeAll { $0.id == att.id }
                         } label: {
@@ -41,10 +40,8 @@ struct AttachmentPreview: View {
                                     .foregroundStyle(Color.mcTextPrimary)
                             }
                         }
-                        // Offset places the button's centre on the top-right corner of the thumbnail
                         .offset(x: 8, y: -8)
                     }
-                    // Inset so the overflowing button is never cropped
                     .padding(.top, 8)
                     .padding(.trailing, 8)
                 }
@@ -52,5 +49,35 @@ struct AttachmentPreview: View {
             .padding(.horizontal, 2)
         }
         .frame(height: 92)
+    }
+}
+
+// MARK: - Async Thumbnail
+// Decodes UIImage from Data on a background thread so the main thread is never blocked.
+
+private struct AsyncThumbnail: View {
+
+    let data: Data?
+    @State private var image: UIImage?
+
+    var body: some View {
+        Group {
+            if let image {
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFill()
+            } else {
+                SkeletonView()
+            }
+        }
+        .task(id: data) {
+            guard let data else { return }
+            let decoded: UIImage? = await withCheckedContinuation { continuation in
+                DispatchQueue.global(qos: .userInitiated).async {
+                    continuation.resume(returning: UIImage(data: data))
+                }
+            }
+            image = decoded
+        }
     }
 }

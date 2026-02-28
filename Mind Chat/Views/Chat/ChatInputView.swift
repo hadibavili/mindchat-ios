@@ -8,6 +8,7 @@ private let kCharLimit = 4000
 struct ChatInputView: View {
 
     @ObservedObject var vm: ChatViewModel
+    @FocusState private var isInputFocused: Bool
     @State private var selectedPhotoItems: [PhotosPickerItem] = []
     @State private var showPhotoPicker = false
     @State private var showDocumentPicker = false
@@ -48,6 +49,16 @@ struct ChatInputView: View {
                         insertion: .move(edge: .bottom).combined(with: .opacity),
                         removal:   .move(edge: .bottom).combined(with: .opacity)
                     ))
+            } else if vm.isUploading {
+                // Uploading state
+                UploadingRow(progress: vm.uploadProgress)
+                    .padding(.horizontal, 16)
+                    .padding(.top, 10)
+                    .padding(.bottom, 6)
+                    .transition(.asymmetric(
+                        insertion: .move(edge: .bottom).combined(with: .opacity),
+                        removal:   .move(edge: .bottom).combined(with: .opacity)
+                    ))
             } else {
                 // Main input container
                 VStack(spacing: 0) {
@@ -67,6 +78,7 @@ struct ChatInputView: View {
                         .padding(.horizontal, 16)
                         .padding(.top, 14)
                         .padding(.bottom, 10)
+                        .focused($isInputFocused)
                         .disabled(vm.isStreaming)
 
                     // Bottom toolbar
@@ -134,6 +146,7 @@ struct ChatInputView: View {
         }
         .background(Color.mcBgPrimary)
         .animation(.mcSmooth, value: isRecording)
+        .animation(.mcSmooth, value: vm.isUploading)
         .animation(.mcSmooth, value: vm.attachments.count)
         .photosPicker(
             isPresented: $showPhotoPicker,
@@ -217,12 +230,23 @@ struct ChatInputView: View {
 
     private func loadPhotos(_ items: [PhotosPickerItem]) async {
         for item in items {
-            guard let data = try? await item.loadTransferable(type: Data.self) else { continue }
+            guard let raw = try? await item.loadTransferable(type: Data.self) else { continue }
+
+            // Transcode HEIC → JPEG. This is CPU-heavy so run it off the main thread,
+            // but we must hop back to @MainActor before touching vm.attachments.
+            let jpegData: Data = await withCheckedContinuation { continuation in
+                DispatchQueue.global(qos: .userInitiated).async {
+                    let result = UIImage(data: raw).flatMap { $0.jpegData(compressionQuality: 0.85) } ?? raw
+                    continuation.resume(returning: result)
+                }
+            }
+
             let name = "\(UUID().uuidString).jpg"
             let tmpURL = FileManager.default.temporaryDirectory.appendingPathComponent(name)
-            try? data.write(to: tmpURL)
+            try? jpegData.write(to: tmpURL)
             var att = PendingAttachment(localURL: tmpURL, name: name, kind: .image, mimeType: "image/jpeg")
-            att.data = data
+            att.data = jpegData
+            // Back on @MainActor here (loadPhotos is called from .onChange which is on main)
             vm.attachments.append(att)
         }
         selectedPhotoItems = []
@@ -244,23 +268,30 @@ struct ChatInputView: View {
 
     private func startRecording() {
         let session = AVAudioSession.sharedInstance()
-        session.requestRecordPermission { granted in
-            guard granted else { return }
-            try? session.setCategory(.record, mode: .default)
-            try? session.setActive(true)
-            let url = FileManager.default.temporaryDirectory.appendingPathComponent("recording.m4a")
-            let settings: [String: Any] = [
-                AVFormatIDKey: Int(kAudioFormatMPEG4AAC),
-                AVSampleRateKey: 44100,
-                AVNumberOfChannelsKey: 1,
-                AVEncoderAudioQualityKey: AVAudioQuality.high.rawValue
-            ]
-            audioRecorder = try? AVAudioRecorder(url: url, settings: settings)
-            audioRecorder?.record()
-            isRecording = true
-            duration    = 0
-            recordingTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { _ in
-                duration += 0.1
+        AVAudioApplication.requestRecordPermission { granted in
+            DispatchQueue.main.async {
+                guard granted else { return }
+                do {
+                    try session.setCategory(.record, mode: .default)
+                    try session.setActive(true)
+                } catch {
+                    return
+                }
+                let url = FileManager.default.temporaryDirectory.appendingPathComponent("recording.m4a")
+                let settings: [String: Any] = [
+                    AVFormatIDKey: Int(kAudioFormatMPEG4AAC),
+                    AVSampleRateKey: 44100,
+                    AVNumberOfChannelsKey: 1,
+                    AVEncoderAudioQualityKey: AVAudioQuality.high.rawValue
+                ]
+                guard let recorder = try? AVAudioRecorder(url: url, settings: settings) else { return }
+                audioRecorder = recorder
+                audioRecorder?.record()
+                isRecording = true
+                duration    = 0
+                recordingTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { _ in
+                    duration += 0.1
+                }
             }
         }
     }
@@ -317,6 +348,36 @@ struct RecordingRow: View {
         let m = Int(t) / 60
         let s = Int(t) % 60
         return String(format: "%d:%02d", m, s)
+    }
+}
+
+// MARK: - Uploading Row
+
+struct UploadingRow: View {
+    let progress: (current: Int, total: Int)?
+
+    var body: some View {
+        HStack(spacing: 12) {
+            ProgressView()
+                .progressViewStyle(.circular)
+                .scaleEffect(0.85)
+
+            if let p = progress, p.total > 1 {
+                Text("Uploading \(p.current) of \(p.total)…")
+                    .font(.subheadline)
+                    .foregroundStyle(.primary)
+            } else {
+                Text("Uploading…")
+                    .font(.subheadline)
+                    .foregroundStyle(.primary)
+            }
+
+            Spacer()
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .background(Color.mcBgSecondary)
+        .clipShape(RoundedRectangle(cornerRadius: 26))
     }
 }
 

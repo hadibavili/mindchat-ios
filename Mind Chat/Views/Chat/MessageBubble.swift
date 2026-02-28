@@ -38,10 +38,10 @@ struct MessageBubble: View {
             Spacer(minLength: 60)
             VStack(alignment: .trailing, spacing: 6) {
                 if let attachments = message.attachments, !attachments.isEmpty {
-                    AttachmentGrid(attachments: attachments) { url in
+                    AttachmentGrid(attachments: attachments, onImageTap: { url in
                         selectedImageURL = url
                         showImageViewer = true
-                    }
+                    }, vm: vm)
                 }
                 if !message.content.isEmpty {
                     Text(message.content)
@@ -61,10 +61,10 @@ struct MessageBubble: View {
     private var assistantBubble: some View {
         VStack(alignment: .leading, spacing: 6) {
             if let attachments = message.attachments, !attachments.isEmpty {
-                AttachmentGrid(attachments: attachments) { url in
+                AttachmentGrid(attachments: attachments, onImageTap: { url in
                     selectedImageURL = url
                     showImageViewer = true
-                }
+                }, vm: vm)
             }
 
             if message.isError {
@@ -195,18 +195,60 @@ struct SearchSourcesRow: View {
     }
 }
 
+// MARK: - Bubble Image
+// Reads from vm.decodedImages cache (populated once off-main-thread).
+// Never decodes synchronously — avoids stalling the main thread on every token re-render.
+
+private struct BubbleImage: View {
+    let attachment: MessageAttachment
+    @ObservedObject var vm: ChatViewModel
+
+    var body: some View {
+        Group {
+            if let cached = vm.decodedImages[attachment.id] {
+                Image(uiImage: cached)
+                    .resizable()
+                    .scaledToFill()
+            } else {
+                // History messages (no local data): fetch from server URL
+                AsyncImage(url: URL(string: attachment.url)) { phase in
+                    switch phase {
+                    case .success(let img): img.resizable().scaledToFill()
+                    default: SkeletonView()
+                    }
+                }
+            }
+        }
+        // Decode once off main thread, store in vm cache so re-renders are free
+        .task(id: attachment.id) {
+            guard vm.decodedImages[attachment.id] == nil,
+                  let data = attachment.localImageData else { return }
+            let decoded: UIImage? = await withCheckedContinuation { continuation in
+                DispatchQueue.global(qos: .userInitiated).async {
+                    continuation.resume(returning: UIImage(data: data))
+                }
+            }
+            if let decoded {
+                vm.cacheImage(decoded, forId: attachment.id)
+            }
+        }
+    }
+}
+
 // MARK: - Attachment Grid
 
 struct AttachmentGrid: View {
     let attachments: [MessageAttachment]
     let onImageTap: (String) -> Void
+    @ObservedObject var vm: ChatViewModel
 
     let imageAttachments: [MessageAttachment]
     let fileAttachments:  [MessageAttachment]
 
-    init(attachments: [MessageAttachment], onImageTap: @escaping (String) -> Void) {
+    init(attachments: [MessageAttachment], onImageTap: @escaping (String) -> Void, vm: ChatViewModel) {
         self.attachments      = attachments
         self.onImageTap       = onImageTap
+        self.vm               = vm
         self.imageAttachments = attachments.filter { $0.type == .image }
         self.fileAttachments  = attachments.filter { $0.type == .file }
     }
@@ -215,29 +257,27 @@ struct AttachmentGrid: View {
         VStack(alignment: .leading, spacing: 6) {
             if !imageAttachments.isEmpty {
                 if imageAttachments.count == 1 {
-                    AsyncImage(url: URL(string: imageAttachments[0].url)) { image in
-                        image.resizable().scaledToFill()
-                    } placeholder: {
-                        SkeletonView()
-                    }
-                    .frame(maxWidth: 220, maxHeight: 150)
-                    .clipShape(RoundedRectangle(cornerRadius: 14))
-                    .onTapGesture { onImageTap(imageAttachments[0].url) }
+                    BubbleImage(attachment: imageAttachments[0], vm: vm)
+                        .frame(width: 220, height: 160)
+                        .clipped()
+                        .clipShape(RoundedRectangle(cornerRadius: 14))
+                        .onTapGesture { onImageTap(imageAttachments[0].url) }
                 } else {
-                    let cols = [GridItem(.flexible()), GridItem(.flexible())]
-                    LazyVGrid(columns: cols, spacing: 4) {
+                    let cellSize: CGFloat = 108
+                    let columns = [
+                        GridItem(.fixed(cellSize), spacing: 4),
+                        GridItem(.fixed(cellSize), spacing: 4)
+                    ]
+                    LazyVGrid(columns: columns, spacing: 4) {
                         ForEach(imageAttachments) { att in
-                            AsyncImage(url: URL(string: att.url)) { image in
-                                image.resizable().scaledToFill()
-                            } placeholder: {
-                                SkeletonView()
-                            }
-                            .frame(height: 100)
-                            .clipShape(RoundedRectangle(cornerRadius: 10))
-                            .onTapGesture { onImageTap(att.url) }
+                            BubbleImage(attachment: att, vm: vm)
+                                .frame(width: cellSize, height: cellSize)
+                                .clipped()
+                                .clipShape(RoundedRectangle(cornerRadius: 10))
+                                .onTapGesture { onImageTap(att.url) }
                         }
                     }
-                    .frame(maxWidth: 220)
+                    .fixedSize()
                 }
             }
 

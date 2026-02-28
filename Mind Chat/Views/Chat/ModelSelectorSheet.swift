@@ -6,58 +6,54 @@ struct ModelSelectorSheet: View {
     @Environment(\.dismiss) private var dismiss
     @State private var plan: PlanType = .free
 
-    var modelsByProvider: [AIProvider: [ModelOption]] {
-        Dictionary(grouping: MODEL_OPTIONS) { $0.provider }
+    /// Flat list sorted free → pro → premium, then stable by original order within each tier.
+    var sortedModels: [ModelOption] {
+        MODEL_OPTIONS.sorted { $0.tier < $1.tier }
     }
 
     var body: some View {
         NavigationStack {
             List {
-                ForEach(AIProvider.allCases, id: \.self) { provider in
-                    if let models = modelsByProvider[provider] {
-                        Section(PROVIDER_LABELS[provider] ?? provider.rawValue) {
-                            ForEach(models) { option in
-                                let isLocked = option.comingSoon || !(PLAN_MODEL_ACCESS[plan]?.contains(option.id) ?? false)
-                                Button {
-                                    guard !isLocked else { return }
-                                    vm.model    = option.id
-                                    vm.provider = option.provider
-                                    EventBus.shared.publish(.modelChanged(provider: option.provider, model: option.id))
-                                    dismiss()
-                                } label: {
-                                    HStack(spacing: 10) {
-                                        // Provider color dot
-                                        Circle()
-                                            .fill(providerColor(option.provider))
-                                            .frame(width: 8, height: 8)
+                ForEach(sortedModels) { option in
+                    let isLocked = option.comingSoon || !(PLAN_MODEL_ACCESS[plan]?.contains(option.id) ?? false)
+                    Button {
+                        guard !isLocked else { return }
+                        vm.model    = option.id
+                        vm.provider = option.provider
+                        EventBus.shared.publish(.modelChanged(provider: option.provider, model: option.id))
+                        dismiss()
+                    } label: {
+                        HStack(spacing: 10) {
+                            // Provider color dot
+                            Circle()
+                                .fill(providerColor(option.provider))
+                                .frame(width: 8, height: 8)
 
-                                        VStack(alignment: .leading, spacing: 2) {
-                                            Text(option.label)
-                                                .foregroundStyle(isLocked ? .secondary : .primary)
-                                            Text(PROVIDER_LABELS[option.provider] ?? "")
-                                                .font(.caption)
-                                                .foregroundStyle(.secondary)
-                                        }
-                                        Spacer()
-                                        if option.comingSoon {
-                                            SoonBadge()
-                                        } else {
-                                            TierBadge(tier: option.tier)
-                                        }
-                                        if isLocked && !option.comingSoon {
-                                            Image(systemName: "lock.fill")
-                                                .font(.caption)
-                                                .foregroundStyle(.secondary)
-                                        } else if vm.model == option.id {
-                                            Image(systemName: "checkmark")
-                                                .foregroundStyle(Color.mcTextLink)
-                                        }
-                                    }
-                                }
-                                .disabled(isLocked)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(option.label)
+                                    .foregroundStyle(isLocked ? .secondary : .primary)
+                                Text(PROVIDER_LABELS[option.provider] ?? "")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                            Spacer()
+                            if option.comingSoon {
+                                SoonBadge()
+                            } else {
+                                TierBadge(tier: option.tier)
+                            }
+                            if isLocked && !option.comingSoon {
+                                Image(systemName: "lock.fill")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            } else if vm.model == option.id {
+                                Image(systemName: "checkmark")
+                                    .foregroundStyle(Color.mcTextLink)
                             }
                         }
+                        .opacity(isLocked ? 0.5 : 1)
                     }
+                    .disabled(isLocked)
                 }
 
                 // Footer
