@@ -67,6 +67,7 @@ struct SettingsView: View {
             .task {
                 vm.themeManager = themeManager
                 await vm.load()
+                await appState.refreshUser()
             }
         }
     }

@@ -193,11 +193,7 @@ struct ChatView: View {
                             .font(.system(size: 18))
                     }
                 } else {
-                    // No active conversation → show History + New Chat
-                    Button { showConversationHistory = true } label: {
-                        Image(systemName: "clock")
-                            .font(.system(size: 18))
-                    }
+                    // No active conversation → show New Chat
                     Button { vm.newChat() } label: {
                         Image(systemName: "square.and.pencil")
                             .font(.system(size: 18))

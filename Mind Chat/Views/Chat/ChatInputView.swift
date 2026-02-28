@@ -148,6 +148,10 @@ struct ChatInputView: View {
         .animation(.mcSmooth, value: isRecording)
         .animation(.mcSmooth, value: vm.isUploading)
         .animation(.mcSmooth, value: vm.attachments.count)
+        .onChange(of: vm.isStreaming) { _, streaming in
+            // Dismiss keyboard when the LLM finishes replying
+            if !streaming { isInputFocused = false }
+        }
         .photosPicker(
             isPresented: $showPhotoPicker,
             selection: $selectedPhotoItems,

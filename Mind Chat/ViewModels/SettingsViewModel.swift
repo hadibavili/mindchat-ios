@@ -9,7 +9,7 @@ final class SettingsViewModel: ObservableObject {
     // MARK: - State
 
     @Published var provider:     AIProvider    = .openai
-    @Published var model:        String        = "gpt-4o-mini"
+    @Published var model:        String        = "gpt-4.1-mini"
     @Published var apiKey:       String        = ""
     @Published var chatMemory:   ChatMemoryMode = .alwaysPersist
     @Published var theme:        AppTheme      = .system
@@ -59,7 +59,10 @@ final class SettingsViewModel: ObservableObject {
     /// Applies a SettingsResponse to all published properties.
     private func applySettings(_ s: SettingsResponse) {
         provider             = s.provider
-        model                = s.model
+        // If the saved model ID is no longer in MODEL_OPTIONS (e.g. old/renamed model),
+        // fall back to the first accessible model for the current provider.
+        let modelKnown = MODEL_OPTIONS.contains { $0.id == s.model }
+        model = modelKnown ? s.model : (MODEL_OPTIONS.first { $0.provider == s.provider }?.id ?? s.model)
         apiKey               = s.apiKey ?? ""
         chatMemory           = s.chatMemory
         persona              = s.persona

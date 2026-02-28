@@ -10,20 +10,25 @@ struct AccountSection: View {
 
     var body: some View {
         Section("Account") {
-            if let user = appState.currentUser {
-                HStack {
+            let displayName = appState.currentUser?.name ?? (appState.persistedUserName.isEmpty ? nil : appState.persistedUserName)
+            let displayEmail = appState.currentUser?.email ?? appState.persistedUserEmail
+
+            if !displayEmail.isEmpty {
+                HStack(spacing: 12) {
                     Image(systemName: "person.circle.fill")
-                        .font(.title2)
+                        .font(.system(size: 40))
                         .foregroundStyle(Color.accentColor)
-                    VStack(alignment: .leading) {
-                        if let name = user.name, !name.isEmpty {
-                            Text(name).fontWeight(.medium)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(displayName ?? displayEmail)
+                            .fontWeight(.semibold)
+                        if displayName != nil {
+                            Text(displayEmail)
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
                         }
-                        Text(user.email)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
                     }
                 }
+                .padding(.vertical, 4)
             }
 
             Button {

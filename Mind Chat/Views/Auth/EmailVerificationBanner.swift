@@ -2,8 +2,11 @@ import SwiftUI
 
 struct EmailVerificationBanner: View {
 
-    @State private var cooldown   = 0
-    @State private var isSending  = false
+    @EnvironmentObject private var appState: AppState
+
+    @State private var cooldown    = 0
+    @State private var isSending   = false
+    @State private var sendError   = false
     @State private var timer: Timer?
 
     var body: some View {
@@ -22,6 +25,10 @@ struct EmailVerificationBanner: View {
                     Text("\(cooldown)s")
                         .font(.caption.bold())
                         .foregroundStyle(.secondary)
+                } else if sendError {
+                    Text("Failed – retry")
+                        .font(.caption.bold())
+                        .foregroundStyle(Color.accentRed)
                 } else {
                     Text("Resend")
                         .font(.caption.bold())
@@ -38,11 +45,24 @@ struct EmailVerificationBanner: View {
 
     private func resend() async {
         isSending = true
+        sendError = false
         defer { isSending = false }
         do {
             try await AuthService.shared.resendVerification()
             startCooldown()
-        } catch {}
+        } catch AppError.serverError(let msg) where msg.lowercased().contains("already verified") {
+            // Server says already verified — update local state and hide the banner
+            appState.persistedEmailVerified = true
+            if let user = appState.currentUser {
+                appState.currentUser = User(
+                    id: user.id, email: user.email, name: user.name,
+                    image: user.image, emailVerified: "verified"
+                )
+            }
+        } catch {
+            sendError = true
+            print("[EmailVerificationBanner] resend error: \(error)")
+        }
     }
 
     private func startCooldown() {
