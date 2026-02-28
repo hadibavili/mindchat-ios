@@ -4,7 +4,6 @@ struct EmptyStateView: View {
 
     @ObservedObject var vm: ChatViewModel
     @EnvironmentObject private var appState: AppState
-    @State private var showSubscription = false
     @State private var appeared = false
 
     private var greeting: String {
@@ -39,13 +38,6 @@ struct EmptyStateView: View {
                 .opacity(appeared ? 1 : 0)
                 .offset(y: appeared ? 0 : 12)
                 .animation(.mcGentle, value: appeared)
-
-            // Upgrade card – shown for free plan users
-            if vm.plan == .free {
-                UpgradeBannerCard { showSubscription = true }
-                    .padding(.horizontal, 16)
-                    .padding(.bottom, 14)
-            }
 
             // Memory mode banner
             MemoryModeBanner(mode: vm.chatMemory)
@@ -88,9 +80,6 @@ struct EmptyStateView: View {
             .padding(.bottom, 20)
         }
         .onAppear { appeared = true }
-        .sheet(isPresented: $showSubscription) {
-            NavigationStack { SubscriptionView() }
-        }
     }
 }
 

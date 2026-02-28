@@ -75,7 +75,7 @@ struct MainTabView: View {
 
             // Scrim
             if showSidebar {
-                Color.black.opacity(0.5)
+                Color.black.opacity(0.32)
                     .ignoresSafeArea()
                     .onTapGesture {
                         withAnimation(.easeOut(duration: 0.25)) { showSidebar = false }

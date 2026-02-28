@@ -6,8 +6,10 @@ struct PlanCardView: View {
     let currentPlan: PlanType
     let onUpgrade: (String) -> Void
 
-    var isCurrentPlan: Bool { plan == currentPlan }
-    var canUpgrade: Bool    { plan.order > currentPlan.order && plan != .trial }
+    var isCurrentPlan: Bool {
+        plan == currentPlan || (plan == .pro && currentPlan == .trial)
+    }
+    var canUpgrade: Bool { plan.order > currentPlan.order && plan != .trial }
 
     private var tagline: String {
         switch plan {
@@ -24,6 +26,17 @@ struct PlanCardView: View {
         case .trial:   return "Free for 14 days"
         case .pro:     return "EUR 10 / month"
         case .premium: return "EUR 25 / month"
+        }
+    }
+
+    private var planGradientColors: [Color] {
+        switch plan {
+        case .free:
+            return [Color.mcTextSecondary.opacity(0.7), Color(hex: "#52525b")]
+        case .trial, .pro:
+            return [Color(hex: "#2383e2"), Color(hex: "#38bdf8")]
+        case .premium:
+            return [Color(hex: "#9065b0"), Color(hex: "#c084fc")]
         }
     }
 
@@ -79,12 +92,39 @@ struct PlanCardView: View {
     }
 
     var body: some View {
+        ZStack {
+            // Gradient border ring
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .fill(isCurrentPlan
+                    ? LinearGradient(colors: planGradientColors,
+                                     startPoint: .topLeading,
+                                     endPoint: .bottomTrailing)
+                    : LinearGradient(colors: [Color.mcBorderDefault.opacity(0.35),
+                                              Color.mcBorderDefault.opacity(0.2)],
+                                     startPoint: .top,
+                                     endPoint: .bottom))
+
+            // Glass card content (1.5pt inset)
+            cardContent
+                .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 18.5, style: .continuous))
+                .padding(1.5)
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .shadow(color: Color.planColor(plan).opacity(isCurrentPlan ? 0.22 : 0.04),
+                radius: isCurrentPlan ? 18 : 4, x: 0, y: 4)
+        .scaleEffect(isCurrentPlan ? 1.0 : 0.985)
+        .animation(.mcSmooth, value: isCurrentPlan)
+    }
+
+    // MARK: - Card Content
+
+    private var cardContent: some View {
         VStack(alignment: .leading, spacing: 12) {
+            // Header
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 4) {
                     HStack(spacing: 6) {
                         Text(plan.label).font(.headline.bold())
-                        // "Popular" badge only when user is on free plan
                         if plan == .pro && currentPlan == .free {
                             Text("Popular")
                                 .font(.caption2.bold())
@@ -92,8 +132,9 @@ struct PlanCardView: View {
                                 .background(Color.mcTextLink.opacity(0.1))
                                 .foregroundStyle(Color.mcTextLink)
                                 .clipShape(Capsule())
+                                .overlay(Capsule().stroke(Color.planPro.opacity(0.4), lineWidth: 1))
+                                .shadow(color: Color.planPro.opacity(0.3), radius: 6, x: 0, y: 0)
                         }
-                        // "Best value" always shown for premium
                         if plan == .premium {
                             Text("Best value")
                                 .font(.caption2.bold())
@@ -101,6 +142,8 @@ struct PlanCardView: View {
                                 .background(Color.accentPurple.opacity(0.1))
                                 .foregroundStyle(Color.accentPurple)
                                 .clipShape(Capsule())
+                                .overlay(Capsule().stroke(Color.accentPurple.opacity(0.4), lineWidth: 1))
+                                .shadow(color: Color.accentPurple.opacity(0.3), radius: 6, x: 0, y: 0)
                         }
                     }
                     Text(tagline)
@@ -111,18 +154,27 @@ struct PlanCardView: View {
                         .foregroundStyle(isCurrentPlan ? Color.planColor(plan) : .primary)
                 }
                 Spacer()
-                if isCurrentPlan {
-                    Text("Current plan")
-                        .font(.caption.bold())
-                        .foregroundStyle(Color.planColor(plan))
-                }
             }
 
+            Divider().opacity(0.4)
+
+            // Feature rows
             ForEach(features) { feature in
-                HStack(spacing: 6) {
-                    Image(systemName: feature.included ? "checkmark.circle.fill" : "xmark.circle.fill")
-                        .font(.caption)
-                        .foregroundStyle(feature.included ? Color.accentGreen : Color.mcTextTertiary)
+                HStack(spacing: 8) {
+                    ZStack {
+                        Circle()
+                            .fill(feature.included
+                                ? (feature.highlighted
+                                    ? Color.accentPurple.opacity(0.15)
+                                    : Color.accentGreen.opacity(0.15))
+                                : Color.clear)
+                            .frame(width: 20, height: 20)
+                        Image(systemName: feature.included ? "checkmark" : "xmark")
+                            .font(.system(size: 9, weight: .bold))
+                            .foregroundStyle(feature.included
+                                ? (feature.highlighted ? Color.accentPurple : Color.accentGreen)
+                                : Color.mcTextTertiary)
+                    }
                     Text(feature.text)
                         .font(.caption)
                         .fontWeight(feature.highlighted ? .semibold : .regular)
@@ -130,32 +182,42 @@ struct PlanCardView: View {
                 }
             }
 
-            if canUpgrade {
+            // CTA
+            if canUpgrade && !isCurrentPlan {
                 Button {
                     onUpgrade(plan.rawValue)
                 } label: {
-                    Text("Upgrade to \(plan.label)")
-                        .fontWeight(.semibold)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 40)
-                        .background(Color.planColor(plan))
-                        .foregroundStyle(.white)
-                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                    HStack(spacing: 6) {
+                        Text("Upgrade to \(plan.label)")
+                            .fontWeight(.semibold)
+                        Image(systemName: "arrow.right")
+                            .font(.system(size: 12, weight: .semibold))
+                    }
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 44)
+                    .background(
+                        LinearGradient(colors: planGradientColors,
+                                       startPoint: .leading,
+                                       endPoint: .trailing)
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                 }
-            } else if plan == .trial && currentPlan == .trial {
-                Text("Trial active")
-                    .font(.caption.bold())
-                    .foregroundStyle(Color.mcTextLink)
+                .buttonStyle(PressableButtonStyle())
+            } else if isCurrentPlan {
+                HStack(spacing: 6) {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundStyle(Color.planColor(plan))
+                    Text("Current plan")
+                        .font(.caption.bold())
+                        .foregroundStyle(Color.planColor(plan))
+                }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 8)
+                .background(Color.planColor(plan).opacity(0.1))
+                .clipShape(Capsule())
             }
         }
-        .padding()
-        .background(Color.mcBgSecondary)
-        .clipShape(RoundedRectangle(cornerRadius: 16))
-        .overlay {
-            if isCurrentPlan {
-                RoundedRectangle(cornerRadius: 16)
-                    .stroke(Color.planColor(plan), lineWidth: 2)
-            }
-        }
+        .padding(16)
     }
 }

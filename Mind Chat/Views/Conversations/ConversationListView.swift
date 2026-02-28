@@ -44,26 +44,23 @@ struct SidebarView: View {
             // User Profile
             userProfileSection
 
-            Divider()
-
-            // Memory / Topic Tree (scrollable primary content)
+            // Memory / Topic Tree (scrollable)
             ScrollView {
                 VStack(spacing: 0) {
                     memoryHeaderRow
                     topicSearchBar
                     topicContent
                 }
+                .padding(.bottom, 8)
             }
 
-            Divider()
-
-            // Quick Actions
-            quickActionsSection
-
-            Divider()
-
-            // Stats Footer
-            statsFooter
+            // Bottom section
+            VStack(spacing: 0) {
+                Divider()
+                    .padding(.horizontal, 16)
+                quickActionsSection
+                statsFooter
+            }
         }
         .background(Color.mcBgSidebar)
         .onReceive(EventBus.shared.events) { event in
@@ -76,37 +73,48 @@ struct SidebarView: View {
     // MARK: - User Profile
 
     private var userProfileSection: some View {
-        HStack(spacing: 12) {
-            // Avatar (initials circle)
-            ZStack {
-                Circle()
-                    .fill(Color.accentColor.opacity(0.15))
-                    .frame(width: 40, height: 40)
-                Text(initials)
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(Color.accentColor)
+        VStack(spacing: 0) {
+            HStack(spacing: 14) {
+
+                // Avatar
+                ZStack {
+                    Circle()
+                        .fill(
+                            LinearGradient(
+                                colors: [Color.accentColor, Color.accentColor.opacity(0.75)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .frame(width: 44, height: 44)
+                    Text(initials)
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundStyle(.white)
+                }
+
+                // Name + email
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(appState.currentUser?.name ?? "User")
+                        .font(.headline)
+                        .foregroundStyle(Color.mcTextPrimary)
+                        .lineLimit(1)
+                    Text(appState.currentUser?.email ?? "")
+                        .font(.caption)
+                        .foregroundStyle(Color.mcTextTertiary)
+                        .lineLimit(1)
+                }
+
+                Spacer()
+
+                planBadge
             }
+            .padding(.horizontal, 18)
+            .padding(.top, 58)
+            .padding(.bottom, 18)
 
-            // Name + email
-            VStack(alignment: .leading, spacing: 2) {
-                Text(appState.currentUser?.name ?? "User")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(Color.mcTextPrimary)
-                    .lineLimit(1)
-                Text(appState.currentUser?.email ?? "")
-                    .font(.caption2)
-                    .foregroundStyle(Color.mcTextTertiary)
-                    .lineLimit(1)
-            }
-
-            Spacer()
-
-            // Plan badge
-            planBadge
+            Divider()
+                .padding(.horizontal, 16)
         }
-        .padding(.horizontal, 18)
-        .padding(.top, 60)
-        .padding(.bottom, 14)
     }
 
     private var initials: String {
@@ -122,10 +130,11 @@ struct SidebarView: View {
     private var planBadge: some View {
         let (label, color) = planBadgeInfo
         Text(label)
-            .font(.caption2.bold())
+            .font(.system(size: 10, weight: .bold))
             .foregroundStyle(color)
-            .padding(.horizontal, 7)
-            .padding(.vertical, 3)
+            .tracking(0.4)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
             .background(color.opacity(0.12))
             .clipShape(Capsule())
     }
@@ -144,49 +153,55 @@ struct SidebarView: View {
     private var memoryHeaderRow: some View {
         HStack {
             Text("MEMORY")
-                .font(.caption.bold())
+                .font(.system(size: 11, weight: .semibold))
                 .foregroundStyle(Color.mcTextTertiary)
+                .tracking(0.6)
             Spacer()
             Button("See all") {
                 showKnowledge = true
                 withAnimation(.easeOut(duration: 0.25)) { showSidebar = false }
             }
-            .font(.caption)
+            .font(.subheadline)
             .foregroundStyle(Color.mcTextLink)
         }
         .padding(.horizontal, 18)
-        .padding(.top, 16)
-        .padding(.bottom, 8)
+        .padding(.top, 20)
+        .padding(.bottom, 10)
     }
 
     private var topicSearchBar: some View {
         HStack(spacing: 8) {
             Image(systemName: "magnifyingglass")
-                .font(.caption)
+                .font(.system(size: 13))
                 .foregroundStyle(Color.mcTextTertiary)
             TextField("Search topics…", text: $topicSearchText)
                 .font(.subheadline)
+                .foregroundStyle(Color.mcTextPrimary)
             if !topicSearchText.isEmpty {
                 Button { topicSearchText = "" } label: {
                     Image(systemName: "xmark.circle.fill")
-                        .font(.caption)
+                        .font(.system(size: 13))
                         .foregroundStyle(Color.mcTextTertiary)
                 }
             }
         }
         .padding(.horizontal, 12)
-        .padding(.vertical, 8)
+        .padding(.vertical, 9)
         .background(Color.mcBgSecondary)
-        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .strokeBorder(Color.mcBorderDefault, lineWidth: 0.5)
+        )
         .padding(.horizontal, 14)
-        .padding(.bottom, 8)
+        .padding(.bottom, 6)
     }
 
     @ViewBuilder
     private var topicContent: some View {
         if topicsVm.isLoading && topicsVm.rootTopics.isEmpty {
             ProgressView()
-                .padding(.vertical, 24)
+                .padding(.vertical, 32)
         } else if filteredTopics.isEmpty {
             VStack(spacing: 8) {
                 Image(systemName: "brain")
@@ -199,7 +214,7 @@ struct SidebarView: View {
                     .foregroundStyle(Color.mcTextTertiary)
                     .multilineTextAlignment(.center)
             }
-            .padding(.vertical, 24)
+            .padding(.vertical, 32)
             .padding(.horizontal, 18)
         } else {
             ForEach(filteredTopics) { node in
@@ -208,7 +223,7 @@ struct SidebarView: View {
                     withAnimation(.easeOut(duration: 0.25)) { showSidebar = false }
                 }
             }
-            .padding(.bottom, 8)
+            .padding(.bottom, 4)
         }
     }
 
@@ -216,40 +231,67 @@ struct SidebarView: View {
 
     private var quickActionsSection: some View {
         VStack(spacing: 0) {
-            drawerNavButton(icon: "clock", label: "Conversation History") {
+            actionRow(
+                icon: "clock.arrow.circlepath",
+                iconColor: Color.mcTextLink,
+                label: "History"
+            ) {
                 showConversationHistory = true
                 withAnimation(.easeOut(duration: 0.25)) { showSidebar = false }
             }
-            drawerNavButton(icon: "gearshape", label: "Settings") {
+
+            Divider().padding(.leading, 54)
+
+            actionRow(
+                icon: "gearshape",
+                iconColor: Color.mcTextSecondary,
+                label: "Settings"
+            ) {
                 showSettings = true
                 withAnimation(.easeOut(duration: 0.25)) { showSidebar = false }
             }
-            drawerNavButton(icon: "rectangle.portrait.and.arrow.right", label: "Sign Out") {
+
+            Divider().padding(.leading, 54)
+
+            actionRow(
+                icon: "rectangle.portrait.and.arrow.right",
+                iconColor: Color.accentRed,
+                label: "Sign Out",
+                labelColor: Color.accentRed
+            ) {
                 withAnimation(.easeOut(duration: 0.25)) { showSidebar = false }
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                     appState.signOut()
                 }
             }
         }
+        .padding(.top, 4)
     }
 
-    private func drawerNavButton(icon: String, label: String, action: @escaping () -> Void) -> some View {
+    private func actionRow(
+        icon: String,
+        iconColor: Color,
+        label: String,
+        labelColor: Color = Color.mcTextPrimary,
+        action: @escaping () -> Void
+    ) -> some View {
         Button(action: action) {
             HStack(spacing: 14) {
-                Image(systemName: icon)
-                    .font(.system(size: 16))
-                    .frame(width: 22)
-                    .foregroundStyle(Color.mcTextSecondary)
+                ZStack {
+                    RoundedRectangle(cornerRadius: 7, style: .continuous)
+                        .fill(iconColor.opacity(0.12))
+                        .frame(width: 30, height: 30)
+                    Image(systemName: icon)
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundStyle(iconColor)
+                }
                 Text(label)
                     .font(.subheadline)
-                    .foregroundStyle(Color.mcTextPrimary)
+                    .foregroundStyle(labelColor)
                 Spacer()
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(Color.mcTextTertiary)
             }
-            .padding(.horizontal, 18)
-            .padding(.vertical, 13)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 11)
             .contentShape(Rectangle())
         }
         .buttonStyle(PressableButtonStyle())
@@ -265,8 +307,9 @@ struct SidebarView: View {
             Text("\(topics) topic\(topics == 1 ? "" : "s") · \(facts) \(facts == 1 ? "memory" : "memories")")
                 .font(.caption2)
                 .foregroundStyle(Color.mcTextTertiary)
-                .padding(.vertical, 12)
                 .frame(maxWidth: .infinity)
+                .padding(.top, 10)
+                .padding(.bottom, 24)
         }
     }
 }
@@ -319,7 +362,7 @@ struct DrawerTopicNode: View {
                         }
                     }
                     .padding(.leading, 6)
-                    .padding(.vertical, 7)
+                    .padding(.vertical, 8)
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(PressableButtonStyle())

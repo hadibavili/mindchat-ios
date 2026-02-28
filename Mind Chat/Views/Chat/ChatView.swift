@@ -45,6 +45,8 @@ struct ChatView: View {
                             .id(message.id)
                             .transition(.messageAppear)
                         }
+                        .frame(maxWidth: 720)
+                        .frame(maxWidth: .infinity)
 
                         if let start = vm.thinkingStart {
                             ThinkingBubble(startTime: start)
@@ -60,12 +62,6 @@ struct ChatView: View {
                                 .transition(.indicatorAppear)
                         }
 
-                        if vm.isExtracting && vm.showMemoryIndicators {
-                            ExtractingIndicator()
-                                .padding(.horizontal, 16)
-                                .padding(.vertical, 6)
-                                .transition(.indicatorAppear)
-                        }
 
                         if let error = vm.errorMessage {
                             HStack {
@@ -129,6 +125,7 @@ struct ChatView: View {
             // Hamburger (left)
             ToolbarItem(placement: .navigationBarLeading) {
                 Button {
+                    UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
                     withAnimation(.easeOut(duration: 0.25)) { showSidebar.toggle() }
                 } label: {
                     Image(systemName: "sidebar.left")

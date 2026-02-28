@@ -72,33 +72,27 @@ final class ChatViewModel: ObservableObject {
 
     func send() async {
         let text = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !text.isEmpty || !attachments.isEmpty else { return }
+        let pendingAttachments = attachments
+        guard !text.isEmpty || !pendingAttachments.isEmpty else { return }
+        guard !isStreaming else { return }
 
-        // Upload attachments
-        var uploadedAttachments: [PendingAttachment] = []
-        if !attachments.isEmpty {
-            isUploading = true
-            for var att in attachments {
-                do {
-                    let resp = try await upload.upload(attachment: att)
-                    att.uploadedURL = resp.url
-                    uploadedAttachments.append(att)
-                } catch {
-                    // Skip failed uploads
-                }
-            }
-            isUploading = false
-        }
+        // Lock the UI immediately so the button can't be tapped again
+        inputText       = ""
+        attachments     = []
+        extractedTopics = []
+        errorMessage    = nil
+        isStreaming     = true
+        thinkingStart   = Date()
 
-        // Optimistic user message
+        // Optimistic user message — use local file URLs so images display instantly
         let userMessage = ChatMessage(
             content: text,
             role: .user,
             conversationId: conversationId,
-            attachments: uploadedAttachments.isEmpty ? nil : uploadedAttachments.map {
+            attachments: pendingAttachments.isEmpty ? nil : pendingAttachments.map {
                 MessageAttachment(
                     id: $0.id,
-                    url: $0.uploadedURL ?? "",
+                    url: $0.localURL.absoluteString,
                     name: $0.name,
                     type: $0.kind == .image ? .image : .file,
                     mimeType: $0.mimeType
@@ -111,12 +105,21 @@ final class ChatViewModel: ObservableObject {
         var assistantMessage = ChatMessage(content: "", role: .assistant, isStreaming: true)
         messages.append(assistantMessage)
 
-        inputText       = ""
-        attachments     = []
-        extractedTopics = []
-        isStreaming     = true
-        thinkingStart   = Date()
-        errorMessage    = nil
+        // Upload attachments (awaited so the AI receives the actual files)
+        var uploadedAttachments: [PendingAttachment] = []
+        if !pendingAttachments.isEmpty {
+            isUploading = true
+            for var att in pendingAttachments {
+                do {
+                    let resp = try await upload.upload(attachment: att)
+                    att.uploadedURL = resp.url
+                    uploadedAttachments.append(att)
+                } catch {
+                    // Skip failed uploads
+                }
+            }
+            isUploading = false
+        }
 
         streamTask = Task {
             do {
@@ -178,7 +181,8 @@ final class ChatViewModel: ObservableObject {
                 updateSources(sources, for: assistantId)
             }
         case .extracting:
-            isExtracting = true
+            isStreaming = false   // unlock input immediately; SSE task keeps running
+            if showMemoryIndicators { isExtracting = true }
         case .topicsExtracted(let topics):
             isExtracting = false
             if showMemoryIndicators {

@@ -9,6 +9,7 @@ struct ChatInputView: View {
 
     @ObservedObject var vm: ChatViewModel
     @State private var selectedPhotoItems: [PhotosPickerItem] = []
+    @State private var showPhotoPicker = false
     @State private var showDocumentPicker = false
     @State private var isRecording = false
     @State private var audioRecorder: AVAudioRecorder?
@@ -36,94 +37,110 @@ struct ChatInputView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // Attachment thumbnails above input
-            if !vm.attachments.isEmpty {
-                AttachmentPreview(attachments: $vm.attachments)
-                    .padding(.horizontal, 16)
-                    .padding(.top, 8)
-                    .transition(.move(edge: .top).combined(with: .opacity))
-            }
 
             if isRecording {
                 // Recording state
                 RecordingRow(duration: duration) { stopRecording() }
                     .padding(.horizontal, 16)
-                    .padding(.vertical, 10)
+                    .padding(.top, 10)
+                    .padding(.bottom, 6)
                     .transition(.asymmetric(
                         insertion: .move(edge: .bottom).combined(with: .opacity),
                         removal:   .move(edge: .bottom).combined(with: .opacity)
                     ))
             } else {
-                // Main pill input
-                HStack(alignment: .bottom, spacing: 8) {
+                // Main input container
+                VStack(spacing: 0) {
 
-                    // + Attach
-                    Menu {
-                        if vm.imageUploadsEnabled {
-                            PhotosPicker(
-                                selection: $selectedPhotoItems,
-                                maxSelectionCount: 10,
-                                matching: .images
-                            ) {
-                                Label("Photos", systemImage: "photo")
-                            }
-                            Button { showDocumentPicker = true } label: {
-                                Label("Files", systemImage: "doc")
-                            }
-                        } else {
-                            Button {} label: {
-                                Label("Upgrade for file uploads", systemImage: "lock.fill")
-                            }
-                            .disabled(true)
-                        }
-                    } label: {
-                        Image(systemName: "plus")
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundStyle(.primary)
-                            .frame(width: 32, height: 32)
-                            .background(Color.mcBgActive)
-                            .clipShape(Circle())
+                    // Attachment thumbnails
+                    if !vm.attachments.isEmpty {
+                        AttachmentPreview(attachments: $vm.attachments)
+                            .padding(.horizontal, 14)
+                            .padding(.top, 10)
+                            .transition(.move(edge: .top).combined(with: .opacity))
                     }
-                    .padding(.bottom, 8)
 
                     // Text field
                     TextField("Ask anything", text: $vm.inputText, axis: .vertical)
                         .font(.body)
                         .lineLimit(1...8)
-                        .padding(.vertical, 10)
-                        .disabled(vm.isStreaming || isRecording)
+                        .padding(.horizontal, 16)
+                        .padding(.top, 14)
+                        .padding(.bottom, 10)
+                        .disabled(vm.isStreaming)
 
-                    // Send / Stop / Mic
-                    sendButton
-                        .padding(.bottom, 8)
+                    // Bottom toolbar
+                    HStack(alignment: .center, spacing: 0) {
+
+                        // + Attach button
+                        Menu {
+                            if vm.imageUploadsEnabled {
+                                Button { showPhotoPicker = true } label: {
+                                    Label("Photos", systemImage: "photo")
+                                }
+                                Button { showDocumentPicker = true } label: {
+                                    Label("Files", systemImage: "doc")
+                                }
+                            } else {
+                                Button {} label: {
+                                    Label("Upgrade for file uploads", systemImage: "lock.fill")
+                                }
+                                .disabled(true)
+                            }
+                        } label: {
+                            Image(systemName: "plus")
+                                .font(.system(size: 15, weight: .semibold))
+                                .foregroundStyle(Color.mcTextSecondary)
+                                .frame(width: 36, height: 36)
+                                .background(Color.mcBgHover)
+                                .clipShape(Circle())
+                                .contentShape(Circle())
+                        }
+
+                        Spacer()
+
+                        // Character counter
+                        if showCounter {
+                            Text("\(charCount)/\(kCharLimit)")
+                                .font(.caption2.monospacedDigit())
+                                .foregroundStyle(isOverLimit ? Color.accentRed : Color.mcTextTertiary)
+                                .animation(.none, value: charCount)
+                                .padding(.trailing, 10)
+                        }
+
+                        // Send / Stop / Mic
+                        sendButton
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.bottom, 12)
                 }
-                .padding(.horizontal, 14)
                 .background(Color.mcBgSecondary)
-                .clipShape(RoundedRectangle(cornerRadius: 26))
+                .clipShape(RoundedRectangle(cornerRadius: 22))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 22)
+                        .stroke(Color.mcBorderDefault, lineWidth: 1)
+                )
                 .padding(.horizontal, 16)
                 .padding(.top, 10)
                 .padding(.bottom, 4)
             }
 
-            // Character counter + disclaimer row
-            HStack(alignment: .center) {
-                Text("MindChat can make mistakes.")
-                    .font(.caption2)
-                    .foregroundStyle(Color.mcTextTertiary)
-                Spacer()
-                if showCounter {
-                    Text("\(charCount)/\(kCharLimit)")
-                        .font(.caption2.monospacedDigit())
-                        .foregroundStyle(isOverLimit ? Color.accentRed : Color.mcTextTertiary)
-                        .animation(.none, value: charCount)
-                }
-            }
-            .padding(.horizontal, 20)
-            .padding(.bottom, 8)
+            // Disclaimer
+            Text("MindChat can make mistakes.")
+                .font(.caption2)
+                .foregroundStyle(Color.mcTextTertiary)
+                .frame(maxWidth: .infinity, alignment: .center)
+                .padding(.bottom, 8)
         }
         .background(Color.mcBgPrimary)
         .animation(.mcSmooth, value: isRecording)
         .animation(.mcSmooth, value: vm.attachments.count)
+        .photosPicker(
+            isPresented: $showPhotoPicker,
+            selection: $selectedPhotoItems,
+            maxSelectionCount: 10,
+            matching: .images
+        )
         .onChange(of: selectedPhotoItems) { _, items in
             Task { await loadPhotos(items) }
         }
@@ -185,7 +202,7 @@ struct ChatInputView: View {
             ZStack {
                 Circle()
                     .fill(sendBgColor)
-                    .frame(width: 32, height: 32)
+                    .frame(width: 36, height: 36)
                 Image(systemName: sendIcon)
                     .font(.system(size: sendIconSize, weight: .bold))
                     .foregroundStyle(sendIconColor)

@@ -6,7 +6,7 @@ struct AttachmentPreview: View {
 
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 10) {
+            HStack(spacing: 8) {
                 ForEach(attachments) { att in
                     ZStack(alignment: .topTrailing) {
                         if att.kind == .image, let data = att.data, let uiImage = UIImage(data: data) {
@@ -28,22 +28,29 @@ struct AttachmentPreview: View {
                             .clipShape(RoundedRectangle(cornerRadius: 10))
                         }
 
-                        // Remove button
+                        // Remove button — sits outside the thumbnail corner
                         Button {
                             attachments.removeAll { $0.id == att.id }
                         } label: {
-                            Image(systemName: "xmark.circle.fill")
-                                .font(.system(size: 18))
-                                .foregroundStyle(.white)
-                                .background(Color.black.opacity(0.5))
-                                .clipShape(Circle())
+                            ZStack {
+                                Circle()
+                                    .fill(Color.mcBgPrimary)
+                                    .frame(width: 20, height: 20)
+                                Image(systemName: "xmark")
+                                    .font(.system(size: 9, weight: .heavy))
+                                    .foregroundStyle(Color.mcTextPrimary)
+                            }
                         }
-                        .offset(x: 6, y: -6)
+                        // Offset places the button's centre on the top-right corner of the thumbnail
+                        .offset(x: 8, y: -8)
                     }
+                    // Inset so the overflowing button is never cropped
+                    .padding(.top, 8)
+                    .padding(.trailing, 8)
                 }
             }
-            .padding(.horizontal)
+            .padding(.horizontal, 2)
         }
-        .frame(height: 88)
+        .frame(height: 92)
     }
 }
