@@ -20,7 +20,7 @@ struct MessageBubble: View {
             }
         }
         .padding(.horizontal, 16)
-        .padding(.vertical, 3)
+        .padding(.vertical, 6)
         .background(isHighlighted ? Color.accentColor.opacity(0.07) : Color.clear)
         .animation(.easeInOut(duration: 0.4), value: isHighlighted)
         .contextMenu { contextMenuContent }
@@ -31,7 +31,7 @@ struct MessageBubble: View {
         }
     }
 
-    // MARK: - User Bubble (accent color pill, right-aligned)
+    // MARK: - User Bubble (subtle gray background, right-aligned)
 
     private var userBubble: some View {
         HStack {
@@ -43,18 +43,20 @@ struct MessageBubble: View {
                         showImageViewer = true
                     }
                 }
-                Text(message.content)
-                    .font(.body)
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 11)
-                    .background(Color.accentColor)
-                    .clipShape(RoundedRectangle(cornerRadius: 20))
+                if !message.content.isEmpty {
+                    Text(message.content)
+                        .font(.body)
+                        .foregroundStyle(Color.mcTextPrimary)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 11)
+                        .background(Color.mcBgSecondary)
+                        .clipShape(RoundedRectangle(cornerRadius: 18))
+                }
             }
         }
     }
 
-    // MARK: - Assistant Bubble (plain text, left-aligned with avatar)
+    // MARK: - Assistant Bubble (clean full-width text, left-aligned with avatar)
 
     private var assistantBubble: some View {
         HStack(alignment: .top, spacing: 10) {
@@ -78,14 +80,11 @@ struct MessageBubble: View {
                             .foregroundStyle(Color.accentRed)
                     }
                 } else if message.content.isEmpty && message.isStreaming {
-                    // Content hasn't started yet — nothing, ThinkingBubble handles it
                     EmptyView()
                 } else {
                     MarkdownView(text: message.content)
-                        .frame(maxWidth: .infinity, alignment: .leading)
 
                     if message.isStreaming && !message.content.isEmpty {
-                        // Blinking cursor
                         Text("●")
                             .font(.caption)
                             .foregroundStyle(Color.mcBorderDefault)
@@ -100,10 +99,43 @@ struct MessageBubble: View {
                 if let sources = message.sources, !sources.isEmpty {
                     SearchSourcesRow(sources: sources)
                 }
+
+                // Action bar (copy/regenerate) for completed assistant messages
+                if !message.isStreaming && !message.isError && !message.content.isEmpty {
+                    assistantActionBar
+                }
             }
 
-            Spacer(minLength: 40)
+            Spacer(minLength: 20)
         }
+    }
+
+    // MARK: - Assistant Action Bar
+
+    private var assistantActionBar: some View {
+        HStack(spacing: 16) {
+            Button {
+                vm.copyMessage(message)
+                showCopied = true
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2) { showCopied = false }
+            } label: {
+                Image(systemName: showCopied ? "checkmark" : "doc.on.doc")
+                    .font(.system(size: 13))
+                    .foregroundStyle(Color.mcTextTertiary)
+                    .contentTransition(.symbolEffect(.replace))
+            }
+            .buttonStyle(.plain)
+
+            if message == vm.messages.last(where: { $0.role == .assistant }) {
+                Button { Task { await vm.regenerateLast() } } label: {
+                    Image(systemName: "arrow.clockwise")
+                        .font(.system(size: 13))
+                        .foregroundStyle(Color.mcTextTertiary)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(.top, 2)
     }
 
     // MARK: - Context Menu
