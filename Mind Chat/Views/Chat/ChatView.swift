@@ -250,7 +250,7 @@ struct ThinkingBubble: View {
             ProgressView()
                 .scaleEffect(0.7)
                 .tint(.secondary)
-            Text("MindChat is thinking… \(elapsed)s")
+            Text("thinking… \(elapsed)s")
                 .font(.caption)
                 .foregroundStyle(.secondary)
             Spacer()
