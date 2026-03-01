@@ -481,6 +481,12 @@ final class ChatViewModel: ObservableObject {
 
     // MARK: - Question Form
 
+    func submitChoiceAnswer(messageId: String, answer: String) async {
+        submittedForms.insert(messageId)
+        inputText = answer
+        await send()
+    }
+
     func submitQuestionForm(messageId: String, form: QuestionForm) async {
         let answers = formAnswers[messageId] ?? [:]
 
@@ -493,6 +499,43 @@ final class ChatViewModel: ObservableObject {
 
         inputText = combined
         await send()
+    }
+
+    // MARK: - Topic Focus
+
+    /// Detects an active `#query` in the input text.
+    /// Returns the text after `#` when the hashtag is at the start of text or preceded by whitespace,
+    /// and the user hasn't typed a space after the query (meaning they moved on).
+    /// Returns nil when there's no active hashtag trigger.
+    var activeHashtagQuery: String? {
+        // Find the last occurrence of # that's at start or preceded by whitespace
+        guard let hashRange = inputText.range(of: "(^|\\s)#", options: .regularExpression, range: inputText.startIndex..<inputText.endIndex) else {
+            return nil
+        }
+        // Get the position right after the #
+        let hashIndex = inputText.index(before: hashRange.upperBound)
+        guard inputText[hashIndex] == "#" else { return nil }
+        let afterHash = inputText[inputText.index(after: hashIndex)...]
+        // If the query contains a space, the user moved on — no longer autocompleting
+        if afterHash.contains(" ") { return nil }
+        return String(afterHash)
+    }
+
+    /// Removes the `#query` from input text, sets topic focus, and fires haptic.
+    func selectTopicFromAutocomplete(_ node: TopicTreeNode) {
+        // Remove #query from inputText
+        if let hashRange = inputText.range(of: "(^|\\s)#\\S*$", options: .regularExpression) {
+            let prefix = inputText[inputText.startIndex..<hashRange.lowerBound]
+            inputText = prefix.trimmingCharacters(in: .whitespaces)
+        }
+        topicFocus = TopicFocus(id: node.id, name: node.name, factCount: node.totalFactCount)
+        Haptics.light()
+    }
+
+    /// Clears the topic focus and fires haptic.
+    func clearTopicFocus() {
+        topicFocus = nil
+        Haptics.light()
     }
 
     func formAnswerBinding(messageId: String, questionId: String) -> Binding<String> {

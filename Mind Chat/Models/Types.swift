@@ -303,6 +303,54 @@ struct ChatMessage: Identifiable, Equatable, Sendable {
     }
 }
 
+// MARK: - Choice Question (single question + selectable options)
+
+struct ChoiceQuestion: Sendable {
+    let question: String
+    let options: [String]
+
+    /// Attempts to find and parse a choice-question JSON block in the message content.
+    /// Matches `{"question":"...","options":[...]}` (key order independent).
+    static func parse(from content: String) -> (preamble: String?, choice: ChoiceQuestion)? {
+        let trimmed = content.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+
+        // Find the start of a JSON object that contains the "options" key
+        guard let jsonStart = trimmed.range(of: "{\"question\"")
+                           ?? trimmed.range(of: "{ \"question\"") else { return nil }
+
+        var jsonString = String(trimmed[jsonStart.lowerBound...])
+
+        // Strip trailing markdown code fence
+        if let fenceRange = jsonString.range(of: "```", options: .backwards) {
+            if let lastBrace = jsonString.range(of: "}", options: .backwards),
+               lastBrace.lowerBound < fenceRange.lowerBound {
+                jsonString = String(jsonString[..<fenceRange.lowerBound])
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+            }
+        }
+
+        guard let data = jsonString.data(using: .utf8) else { return nil }
+
+        struct Raw: Decodable {
+            let question: String
+            let options: [String]
+        }
+
+        guard let raw = try? JSONDecoder().decode(Raw.self, from: data),
+              !raw.options.isEmpty else { return nil }
+
+        var preamble = String(trimmed[..<jsonStart.lowerBound])
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        if let fenceOpener = preamble.range(of: "```\\w*\\s*$", options: .regularExpression) {
+            preamble = String(preamble[..<fenceOpener.lowerBound])
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+
+        return (preamble.isEmpty ? nil : preamble, ChoiceQuestion(question: raw.question, options: raw.options))
+    }
+}
+
 // MARK: - Question Form
 
 struct QuestionItem: Identifiable, Sendable {
@@ -458,6 +506,16 @@ struct TopicTreeNode: Codable, Identifiable, Hashable, Sendable {
 
     var totalFactCount: Int {
         factCount + children.reduce(0) { $0 + $1.totalFactCount }
+    }
+
+    /// Returns this node followed by all descendants in depth-first order.
+    func flattened() -> [TopicTreeNode] {
+        [self] + children.flatMap { $0.flattened() }
+    }
+
+    /// Flattens an array of root nodes into a single searchable list.
+    static func flattenAll(_ roots: [TopicTreeNode]) -> [TopicTreeNode] {
+        roots.flatMap { $0.flattened() }
     }
 }
 

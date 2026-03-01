@@ -11,24 +11,30 @@ struct MessageBubble: View {
 
     var isUser: Bool { message.role == .user }
 
-    /// True when this assistant message contains (or is streaming) a question form.
+    /// True when this assistant message contains (or is streaming) a structured form.
     private var isQuestionFormMessage: Bool {
-        !isUser && (activeQuestionForm != nil || isStreamingQuestionJSON)
+        !isUser && (activeQuestionForm != nil || activeChoiceQuestion != nil || isStreamingQuestionJSON)
     }
 
-    /// Parsed form result (only when JSON is complete).
+    /// Parsed multi-field form result (only when JSON is complete).
     private var activeQuestionForm: QuestionFormResult? {
         QuestionForm.parse(from: message.content)
     }
 
+    /// Parsed single choice question (only when JSON is complete).
+    private var activeChoiceQuestion: (preamble: String?, choice: ChoiceQuestion)? {
+        // Don't parse if it's a multi-question form
+        guard activeQuestionForm == nil else { return nil }
+        return ChoiceQuestion.parse(from: message.content)
+    }
+
     /// True while the message is still streaming but the content already looks like
-    /// question-form JSON (starts with `{"questions`). Used to suppress the raw JSON
-    /// flash and show a placeholder instead.
+    /// question-form JSON. Used to suppress the raw JSON flash.
     private var isStreamingQuestionJSON: Bool {
         guard message.isStreaming else { return false }
         let t = message.content.trimmingCharacters(in: .whitespacesAndNewlines)
-        // Check the tail of content — the JSON block may follow a prose preamble
         return t.contains("{\"questions\"") || t.contains("{ \"questions\"")
+            || t.contains("{\"question\"") || t.contains("{ \"question\"")
     }
 
     var body: some View {
@@ -99,16 +105,24 @@ struct MessageBubble: View {
             } else if message.content.isEmpty && message.isStreaming {
                 EmptyView()
             } else if let result = activeQuestionForm {
-                // JSON is fully parseable → show the interactive form
+                // JSON is fully parseable → show the interactive multi-field form
                 if let preamble = result.preamble {
                     MarkdownView(text: preamble)
                 }
                 QuestionFormView(form: result.form, messageId: message.id, vm: vm)
+            } else if let (preamble, choice) = activeChoiceQuestion {
+                // Single choice question → show option chips
+                if let preamble {
+                    MarkdownView(text: preamble)
+                }
+                ChoiceFormView(choice: choice, messageId: message.id, vm: vm)
             } else if isStreamingQuestionJSON {
                 // JSON is still streaming in — show preamble (if any) + a loading indicator
                 // instead of flashing raw JSON as a code snippet
                 if let preambleEnd = message.content.range(of: "{\"questions\"") ??
-                                     message.content.range(of: "{ \"questions\"") {
+                                     message.content.range(of: "{ \"questions\"") ??
+                                     message.content.range(of: "{\"question\"") ??
+                                     message.content.range(of: "{ \"question\"") {
                     let preamble = String(message.content[..<preambleEnd.lowerBound])
                         .trimmingCharacters(in: .whitespacesAndNewlines)
                         .replacingOccurrences(of: "```\\w*\\s*$", with: "", options: .regularExpression)
