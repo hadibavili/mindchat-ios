@@ -49,6 +49,7 @@ final class ChatViewModel: ObservableObject {
     @Published var provider: AIProvider   = .openai
     @Published var model: String          = "gpt-4.1-mini"
     @Published var chatMemory: ChatMemoryMode = .alwaysPersist
+    @Published var persona: PersonaType   = .default
     @Published var plan: PlanType         = .free
     @Published var voiceEnabled: Bool     = false
     @Published var imageUploadsEnabled: Bool = false
@@ -104,6 +105,8 @@ final class ChatViewModel: ObservableObject {
     // MARK: - Send
 
     func send() async {
+        let sendStart = Date()
+        print("[Timing] ▶ send() called — T+0.000s")
         var text = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
         let pendingAttachments = attachments
         guard !text.isEmpty || !pendingAttachments.isEmpty else { return }
@@ -195,9 +198,11 @@ final class ChatViewModel: ObservableObject {
             return HistoryMessage(role: msg.role, content: msg.content)
         }
 
+        let capturedSendStart = sendStart
         streamTask = Task.detached(priority: .userInitiated) {
+            func elapsed() -> String { String(format: "%.3f", Date().timeIntervalSince(capturedSendStart)) }
             do {
-                print("[SSE] Opening stream — provider=\(snapshotProvider.rawValue) model=\(snapshotModel) attachments=\(uploadedAttachments.count)")
+                print("[Timing] T+\(elapsed())s — calling chat.send() | provider=\(snapshotProvider.rawValue) model=\(snapshotModel)")
                 let stream = try await self.chat.send(
                     message: text,
                     conversationId: snapshotConvId,
@@ -207,7 +212,7 @@ final class ChatViewModel: ObservableObject {
                     attachments: uploadedAttachments,
                     topicId: currentTopicFocus?.id
                 )
-                print("[SSE] Stream opened, waiting for events…")
+                print("[Timing] T+\(elapsed())s — stream returned (SSE connected), waiting for first event…")
 
                 var tokenBatch = ""
                 var lastFlush = Date()
@@ -216,7 +221,7 @@ final class ChatViewModel: ObservableObject {
 
                 for try await event in stream {
                     guard !Task.isCancelled else {
-                        print("[SSE] Task cancelled after \(eventCount) events, \(tokenCount) tokens")
+                        print("[Timing] T+\(elapsed())s — task cancelled after \(eventCount) events, \(tokenCount) tokens")
                         break
                     }
                     eventCount += 1
@@ -224,7 +229,7 @@ final class ChatViewModel: ObservableObject {
                     if case .token(let t) = event {
                         tokenBatch += t
                         tokenCount += 1
-                        if tokenCount == 1 { print("[SSE] First token received") }
+                        if tokenCount == 1 { print("[Timing] T+\(elapsed())s — ★ FIRST TOKEN received") }
                         let now = Date()
                         if now.timeIntervalSince(lastFlush) >= 0.016 {
                             let batch = tokenBatch
@@ -257,13 +262,13 @@ final class ChatViewModel: ObservableObject {
                         self.handle(event: .token(batch), assistantId: assistantId)
                     }
                 }
-                print("[SSE] Stream exhausted — \(eventCount) events, \(tokenCount) tokens")
+                print("[Timing] T+\(elapsed())s — stream exhausted | \(eventCount) events, \(tokenCount) tokens")
 
             } catch let e as AppError {
-                print("[SSE] AppError: \(e.errorDescription ?? String(describing: e))")
+                print("[Timing] T+\(elapsed())s — AppError: \(e.errorDescription ?? String(describing: e))")
                 await MainActor.run { self.finishStream(assistantId: assistantId, error: e.errorDescription) }
             } catch {
-                print("[SSE] Error: \(error)")
+                print("[Timing] T+\(elapsed())s — Error: \(error)")
                 await MainActor.run { self.finishStream(assistantId: assistantId, error: error.localizedDescription) }
             }
         }
@@ -429,6 +434,7 @@ final class ChatViewModel: ObservableObject {
             provider             = cached.provider
             model                = cached.model
             chatMemory           = cached.chatMemory
+            persona              = cached.persona
             plan                 = cached.plan
             showMemoryIndicators = cached.showMemoryIndicators
         }
@@ -443,6 +449,7 @@ final class ChatViewModel: ObservableObject {
             provider             = s.provider
             model                = s.model
             chatMemory           = s.chatMemory
+            persona              = s.persona
             plan                 = s.plan
             showMemoryIndicators = s.showMemoryIndicators
         } catch {
@@ -455,6 +462,15 @@ final class ChatViewModel: ObservableObject {
         } catch {
             print("[ChatViewModel] getUsage failed: \(error)")
         }
+    }
+
+    // MARK: - Persona
+
+    func updatePersona(_ p: PersonaType) async {
+        persona = p
+        try? await SettingsService.shared.updateSettings(
+            SettingsUpdateRequest(persona: p)
+        )
     }
 
     // MARK: - Suggestion

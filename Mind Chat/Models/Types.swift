@@ -135,6 +135,16 @@ enum PersonaType: String, Codable, CaseIterable, Hashable, Sendable {
         case .journal: return Color(red: 0.55, green: 0.35, blue: 0.85)
         }
     }
+
+    var icon: String {
+        switch self {
+        case .default:    return "sparkles"
+        case .therapy:    return "heart.fill"
+        case .teacher:    return "graduationcap.fill"
+        case .brainstorm: return "lightbulb.fill"
+        case .journal:    return "book.fill"
+        }
+    }
 }
 
 enum ChatMemoryMode: String, Codable, CaseIterable, Sendable {
@@ -356,8 +366,8 @@ struct QuestionForm: Sendable {
                 .trimmingCharacters(in: .whitespacesAndNewlines)
         }
 
-        let form = QuestionForm(questions: raw.questions.map {
-            QuestionItem(id: UUID().uuidString, label: $0.label, placeholder: $0.placeholder ?? "")
+        let form = QuestionForm(questions: raw.questions.enumerated().map { index, q in
+            QuestionItem(id: "q\(index)", label: q.label, placeholder: q.placeholder ?? "")
         })
 
         return QuestionFormResult(

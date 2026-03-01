@@ -11,6 +11,26 @@ struct MessageBubble: View {
 
     var isUser: Bool { message.role == .user }
 
+    /// True when this assistant message contains (or is streaming) a question form.
+    private var isQuestionFormMessage: Bool {
+        !isUser && (activeQuestionForm != nil || isStreamingQuestionJSON)
+    }
+
+    /// Parsed form result (only when JSON is complete).
+    private var activeQuestionForm: QuestionFormResult? {
+        QuestionForm.parse(from: message.content)
+    }
+
+    /// True while the message is still streaming but the content already looks like
+    /// question-form JSON (starts with `{"questions`). Used to suppress the raw JSON
+    /// flash and show a placeholder instead.
+    private var isStreamingQuestionJSON: Bool {
+        guard message.isStreaming else { return false }
+        let t = message.content.trimmingCharacters(in: .whitespacesAndNewlines)
+        // Check the tail of content — the JSON block may follow a prose preamble
+        return t.contains("{\"questions\"") || t.contains("{ \"questions\"")
+    }
+
     var body: some View {
         Group {
             if isUser {
@@ -23,7 +43,8 @@ struct MessageBubble: View {
         .padding(.vertical, 6)
         .background(isHighlighted ? Color.accentColor.opacity(0.07) : Color.clear)
         .animation(.easeInOut(duration: 0.4), value: isHighlighted)
-        .contextMenu { contextMenuContent }
+        // Skip contextMenu on question-form messages — it blocks TextField interaction
+        .modifier(ConditionalContextMenu(show: !isQuestionFormMessage) { contextMenuContent })
         .fullScreenCover(isPresented: $showImageViewer) {
             if let url = selectedImageURL {
                 ImageViewerSheet(imageURL: url)
@@ -77,11 +98,34 @@ struct MessageBubble: View {
                 }
             } else if message.content.isEmpty && message.isStreaming {
                 EmptyView()
-            } else if !message.isStreaming, let result = QuestionForm.parse(from: message.content) {
+            } else if let result = activeQuestionForm {
+                // JSON is fully parseable → show the interactive form
                 if let preamble = result.preamble {
                     MarkdownView(text: preamble)
                 }
                 QuestionFormView(form: result.form, messageId: message.id, vm: vm)
+            } else if isStreamingQuestionJSON {
+                // JSON is still streaming in — show preamble (if any) + a loading indicator
+                // instead of flashing raw JSON as a code snippet
+                if let preambleEnd = message.content.range(of: "{\"questions\"") ??
+                                     message.content.range(of: "{ \"questions\"") {
+                    let preamble = String(message.content[..<preambleEnd.lowerBound])
+                        .trimmingCharacters(in: .whitespacesAndNewlines)
+                        .replacingOccurrences(of: "```\\w*\\s*$", with: "", options: .regularExpression)
+                        .trimmingCharacters(in: .whitespacesAndNewlines)
+                    if !preamble.isEmpty {
+                        MarkdownView(text: preamble)
+                    }
+                }
+                HStack(spacing: 8) {
+                    ProgressView()
+                        .scaleEffect(0.7)
+                        .tint(.secondary)
+                    Text("Preparing questions…")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                .padding(.top, 4)
             } else {
                 MarkdownView(text: message.content)
 
@@ -299,6 +343,24 @@ struct AttachmentGrid: View {
                 .background(Color.mcBgSecondary)
                 .clipShape(RoundedRectangle(cornerRadius: 10))
             }
+        }
+    }
+}
+
+// MARK: - Conditional Context Menu
+
+/// Applies a context menu only when `show` is true.
+/// When false, the view renders without any long-press gesture, so child
+/// interactive controls (e.g. TextFields inside QuestionFormView) work normally.
+private struct ConditionalContextMenu<MenuContent: View>: ViewModifier {
+    let show: Bool
+    @ViewBuilder let menuContent: () -> MenuContent
+
+    func body(content: Content) -> some View {
+        if show {
+            content.contextMenu { menuContent() }
+        } else {
+            content
         }
     }
 }

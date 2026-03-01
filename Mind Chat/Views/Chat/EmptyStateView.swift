@@ -6,6 +6,7 @@ struct EmptyStateView: View {
     @EnvironmentObject private var appState: AppState
     @State private var appeared = false
     @State private var greeting: String = ""
+    @State private var showPersonaPicker = false
 
     private func pickGreeting() -> String {
         let hour = Calendar.current.component(.hour, from: Date())
@@ -42,10 +43,15 @@ struct EmptyStateView: View {
     }
 
     var body: some View {
-        if let focus = vm.topicFocus {
-            topicFocusState(focus: focus)
-        } else {
-            defaultGreetingState
+        Group {
+            if let focus = vm.topicFocus {
+                topicFocusState(focus: focus)
+            } else {
+                defaultGreetingState
+            }
+        }
+        .sheet(isPresented: $showPersonaPicker) {
+            PersonaSelectorSheet(vm: vm)
         }
     }
 
@@ -75,6 +81,28 @@ struct EmptyStateView: View {
                 .opacity(appeared ? 1 : 0)
                 .offset(y: appeared ? 0 : 8)
                 .animation(.mcGentle.delay(0.05), value: appeared)
+
+            // Chat mode chip
+            Button { showPersonaPicker = true } label: {
+                HStack(spacing: 5) {
+                    Image(systemName: vm.persona.icon)
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(vm.persona.color)
+                    Text(vm.persona.label)
+                        .font(.caption.bold())
+                        .foregroundStyle(Color.mcTextPrimary)
+                    Image(systemName: "chevron.down")
+                        .font(.system(size: 9, weight: .semibold))
+                        .foregroundStyle(Color.mcTextTertiary)
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .background(Color.mcBgSecondary)
+                .clipShape(Capsule())
+            }
+            .padding(.bottom, 16)
+            .opacity(appeared ? 1 : 0)
+            .animation(.mcGentle.delay(0.08), value: appeared)
 
             // Memory mode banner
             MemoryModeBanner(mode: vm.chatMemory)

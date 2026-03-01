@@ -87,7 +87,10 @@ final class APIClient {
         }
         req.httpBody = try JSONEncoder.mindChat.encode(body)
 
+        let sseConnectStart = Date()
+        print("[Timing] SSE → opening TCP connection to \(path)")
         let (bytes, response) = try await session.bytes(for: req)
+        print("[Timing] SSE → connection established in \(String(format: "%.0f", Date().timeIntervalSince(sseConnectStart) * 1000))ms")
         guard let http = response as? HTTPURLResponse else {
             throw AppError.networkError("Invalid response")
         }

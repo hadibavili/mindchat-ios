@@ -8,6 +8,7 @@ struct ChatView: View {
     @Binding var showConversationHistory: Bool
     @EnvironmentObject private var appState: AppState
     @State private var showModelSelector  = false
+    @State private var showPersonaPicker  = false
     @State private var showRenameAlert    = false
     @State private var renameText         = ""
     @State private var atBottom           = true
@@ -149,6 +150,22 @@ struct ChatView: View {
 
             // Right buttons
             ToolbarItemGroup(placement: .navigationBarTrailing) {
+                // Persona icon pill (always visible)
+                Button { showPersonaPicker = true } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: vm.persona.icon)
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(vm.persona.color)
+                        Image(systemName: "chevron.down")
+                            .font(.system(size: 9, weight: .bold))
+                            .foregroundStyle(Color.secondary)
+                    }
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(Color(.secondarySystemFill))
+                    .clipShape(Capsule())
+                }
+
                 // Model selector pill (always visible)
                 Button { showModelSelector = true } label: {
                     HStack(spacing: 3) {
@@ -156,13 +173,14 @@ struct ChatView: View {
                             .font(.caption.bold())
                             .lineLimit(1)
                         Image(systemName: "chevron.down")
-                            .font(.system(size: 9, weight: .semibold))
+                            .font(.system(size: 9, weight: .bold))
+                            .foregroundStyle(Color.secondary)
                     }
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(Color.mcBgSecondary)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(Color(.secondarySystemFill))
                     .clipShape(Capsule())
-                    .foregroundStyle(Color.mcTextPrimary)
+                    .foregroundStyle(Color.primary)
                 }
 
                 if vm.conversationId != nil {
@@ -203,6 +221,9 @@ struct ChatView: View {
         }
         .sheet(isPresented: $showModelSelector) {
             ModelSelectorSheet(vm: vm)
+        }
+        .sheet(isPresented: $showPersonaPicker) {
+            PersonaSelectorSheet(vm: vm)
         }
         .alert("Rename Conversation", isPresented: $showRenameAlert) {
             TextField("Title", text: $renameText)
