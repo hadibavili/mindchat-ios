@@ -12,6 +12,7 @@ struct ChatView: View {
     @State private var showRenameAlert    = false
     @State private var renameText         = ""
     @State private var atBottom           = true
+    @State private var flatTopics: [TopicTreeNode] = []
     @Namespace private var bottomID
 
     var body: some View {
@@ -123,8 +124,32 @@ struct ChatView: View {
                 .padding(.vertical, 6)
             }
 
+            // Topic autocomplete overlay
+            if let query = vm.activeHashtagQuery {
+                TopicAutocompleteOverlay(
+                    allTopics: flatTopics,
+                    query: query
+                ) { node in
+                    vm.selectTopicFromAutocomplete(node)
+                }
+                .padding(.bottom, 4)
+            }
+
             // Input
             ChatInputView(vm: vm)
+        }
+        .animation(.mcSnappy, value: vm.activeHashtagQuery != nil)
+        .task {
+            if let cached: [TopicTreeNode] = CacheStore.shared.get(.topicsTree) {
+                flatTopics = TopicTreeNode.flattenAll(cached)
+            }
+        }
+        .onReceive(EventBus.shared.events) { event in
+            if case .topicsUpdated = event {
+                if let cached: [TopicTreeNode] = CacheStore.shared.get(.topicsTree) {
+                    flatTopics = TopicTreeNode.flattenAll(cached)
+                }
+            }
         }
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {

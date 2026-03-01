@@ -12,6 +12,7 @@ struct ChatInputView: View {
     @State private var selectedPhotoItems: [PhotosPickerItem] = []
     @State private var showPhotoPicker = false
     @State private var showDocumentPicker = false
+    @State private var showTopicPicker = false
     @State private var isRecording = false
     @State private var audioRecorder: AVAudioRecorder?
     @State private var recordingTimer: Timer?
@@ -81,8 +82,24 @@ struct ChatInputView: View {
                             .transition(.move(edge: .top).combined(with: .opacity))
                     }
 
+                    // Topic focus chip
+                    if let focus = vm.topicFocus {
+                        HStack {
+                            TopicFocusChip(focus: focus) {
+                                vm.clearTopicFocus()
+                            }
+                            Spacer()
+                        }
+                        .padding(.horizontal, 14)
+                        .padding(.top, 10)
+                    }
+
                     // Text field
-                    TextField("Ask anything", text: $vm.inputText, axis: .vertical)
+                    TextField(
+                        vm.topicFocus != nil ? "Ask about \(vm.topicFocus!.name)..." : "Ask anything",
+                        text: $vm.inputText,
+                        axis: .vertical
+                    )
                         .font(.body)
                         .lineLimit(1...8)
                         .padding(.horizontal, 16)
@@ -96,6 +113,12 @@ struct ChatInputView: View {
 
                         // + Attach button
                         Menu {
+                            Button { showTopicPicker = true } label: {
+                                Label("Focus on Topic", systemImage: "brain.head.profile")
+                            }
+
+                            Divider()
+
                             if vm.imageUploadsEnabled {
                                 Button { showPhotoPicker = true } label: {
                                     Label("Photos", systemImage: "photo")
@@ -177,6 +200,10 @@ struct ChatInputView: View {
                 for url in urls { addFile(url: url) }
             }
         }
+        .sheet(isPresented: $showTopicPicker) {
+            TopicPickerSheet(vm: vm)
+        }
+        .animation(.mcSmooth, value: vm.topicFocus?.id)
     }
 
     // MARK: - Send Button Helpers
