@@ -20,7 +20,13 @@ struct ModelSelectorSheet: View {
                         guard !isLocked else { return }
                         vm.model    = option.id
                         vm.provider = option.provider
-                        EventBus.shared.publish(.modelChanged(provider: option.provider, model: option.id))
+                        let p = option.provider, m = option.id
+                        Task {
+                            try? await SettingsService.shared.updateSettings(
+                                SettingsUpdateRequest(provider: p, model: m)
+                            )
+                            EventBus.shared.publish(.modelChanged(provider: p, model: m))
+                        }
                         dismiss()
                     } label: {
                         HStack(spacing: 10) {

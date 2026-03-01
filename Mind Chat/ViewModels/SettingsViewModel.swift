@@ -43,10 +43,21 @@ final class SettingsViewModel: ObservableObject {
     private var savedShowMemoryIndicators: Bool           = true
 
     private let settingsService = SettingsService.shared
+    private var cancellables = Set<AnyCancellable>()
     var themeManager: ThemeManager?
 
     init(themeManager: ThemeManager? = nil) {
         self.themeManager = themeManager
+        EventBus.shared.events
+            .receive(on: RunLoop.main)
+            .sink { [weak self] event in
+                if case .modelChanged(let p, let m) = event {
+                    self?.provider = p
+                    self?.model    = m
+                    self?.checkDirty()
+                }
+            }
+            .store(in: &cancellables)
     }
 
     func checkDirty() {
@@ -158,6 +169,7 @@ final class SettingsViewModel: ObservableObject {
             )
             try await settingsService.updateSettings(update)
             takeSnapshot()
+            EventBus.shared.publish(.modelChanged(provider: provider, model: model))
             saveSuccess = true
             Task {
                 try? await Task.sleep(nanoseconds: 2_000_000_000)

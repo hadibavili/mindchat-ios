@@ -67,10 +67,25 @@ final class ChatViewModel: ObservableObject {
 
     private var streamTask: Task<Void, Never>?
     private var recordingTimer: Timer?
+    private var cancellables = Set<AnyCancellable>()
 
     private let chat     = ChatService.shared
     private let upload   = UploadService.shared
     private let eventBus = EventBus.shared
+
+    // MARK: - Init
+
+    init() {
+        EventBus.shared.events
+            .receive(on: RunLoop.main)
+            .sink { [weak self] event in
+                if case .modelChanged(let p, let m) = event {
+                    self?.provider = p
+                    self?.model    = m
+                }
+            }
+            .store(in: &cancellables)
+    }
 
     // MARK: - Load Messages
 
