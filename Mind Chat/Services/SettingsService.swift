@@ -51,4 +51,18 @@ final class SettingsService {
         CacheStore.shared.set(.usage, value: response)
         return response
     }
+
+    // MARK: - Background Refresh
+
+    /// Silently fetches both settings and usage from the server, updating the cache.
+    /// Call on every app launch so the long-lived disk cache stays fresh.
+    func refreshInBackground() async {
+        async let s: Void = { [self] in
+            _ = try? await getSettings()
+        }()
+        async let u: Void = { [self] in
+            _ = try? await getUsage()
+        }()
+        _ = await (s, u)
+    }
 }

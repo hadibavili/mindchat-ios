@@ -104,6 +104,13 @@ struct SettingsResponse: Codable, Sendable {
     let plan: PlanType
     let trialEndsAt: Date?
 
+    enum CodingKeys: String, CodingKey {
+        case provider, model, apiKey, chatMemory, theme, fontSize
+        case persona = "chatMode"
+        case highContrast, accentColor, language, autoExtract, showMemoryIndicators
+        case plan, trialEndsAt
+    }
+
     // Custom decoder: use defaults for any missing/unknown field so a single
     // unexpected value doesn't blow up the entire settings load.
     init(from decoder: Decoder) throws {
@@ -255,6 +262,12 @@ struct SettingsUpdateRequest: Codable, Sendable {
     var language: String?
     var autoExtract: Bool?
     var showMemoryIndicators: Bool?
+
+    enum CodingKeys: String, CodingKey {
+        case provider, model, apiKey, chatMemory, theme, fontSize
+        case persona = "chatMode"
+        case highContrast, accentColor, language, autoExtract, showMemoryIndicators
+    }
 }
 
 // MARK: - Chat Request

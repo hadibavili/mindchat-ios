@@ -293,6 +293,80 @@ struct ChatMessage: Identifiable, Equatable, Sendable {
     }
 }
 
+// MARK: - Question Form
+
+struct QuestionItem: Identifiable, Sendable {
+    let id: String
+    let label: String
+    let placeholder: String
+}
+
+struct QuestionFormResult: Sendable {
+    /// Any prose text that appeared before the JSON block.
+    let preamble: String?
+    let form: QuestionForm
+}
+
+struct QuestionForm: Sendable {
+    let questions: [QuestionItem]
+
+    /// Attempts to find and parse a question-form JSON block in the message content.
+    /// The JSON may be the entire content, wrapped in markdown code fences,
+    /// or appended after some prose text. Returns nil if no valid question form is found.
+    static func parse(from content: String) -> QuestionFormResult? {
+        let trimmed = content.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+
+        // Find the start of the JSON object containing "questions"
+        guard let jsonStart = trimmed.range(of: "{\"questions\"")
+                           ?? trimmed.range(of: "{ \"questions\"") else { return nil }
+
+        // Extract everything from the JSON opening brace onward
+        var jsonString = String(trimmed[jsonStart.lowerBound...])
+
+        // Strip trailing markdown code fence (```), which the LLM may append
+        if let fenceRange = jsonString.range(of: "```", options: .backwards) {
+            // Only strip if the fence comes after the JSON closing brace
+            if let lastBrace = jsonString.range(of: "}", options: .backwards),
+               lastBrace.lowerBound < fenceRange.lowerBound {
+                jsonString = String(jsonString[..<fenceRange.lowerBound])
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+            }
+        }
+
+        guard let data = jsonString.data(using: .utf8) else { return nil }
+
+        struct RawForm: Decodable {
+            struct RawQuestion: Decodable {
+                let label: String
+                let placeholder: String?
+            }
+            let questions: [RawQuestion]
+        }
+
+        guard let raw = try? JSONDecoder().decode(RawForm.self, from: data),
+              !raw.questions.isEmpty else { return nil }
+
+        // Build preamble from text before the JSON, stripping any code fence opener
+        var preamble = String(trimmed[..<jsonStart.lowerBound])
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        // Remove a trailing code fence opener like ```input or ```json or just ```
+        if let fenceOpener = preamble.range(of: "```\\w*\\s*$", options: .regularExpression) {
+            preamble = String(preamble[..<fenceOpener.lowerBound])
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+
+        let form = QuestionForm(questions: raw.questions.map {
+            QuestionItem(id: UUID().uuidString, label: $0.label, placeholder: $0.placeholder ?? "")
+        })
+
+        return QuestionFormResult(
+            preamble: preamble.isEmpty ? nil : preamble,
+            form: form
+        )
+    }
+}
+
 struct MessageAttachment: Codable, Identifiable, Sendable {
     let id: String
     let url: String
@@ -310,6 +384,25 @@ struct MessageAttachment: Codable, Identifiable, Sendable {
     // Exclude localImageData from Codable so it never hits the wire or breaks decoding.
     enum CodingKeys: String, CodingKey {
         case id, url, name, type, mimeType
+    }
+
+    init(id: String = UUID().uuidString, url: String, name: String, type: AttachmentKind, mimeType: String?, localImageData: Data? = nil) {
+        self.id = id
+        self.url = url
+        self.name = name
+        self.type = type
+        self.mimeType = mimeType
+        self.localImageData = localImageData
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.id = try container.decodeIfPresent(String.self, forKey: .id) ?? UUID().uuidString
+        self.url = try container.decode(String.self, forKey: .url)
+        self.name = try container.decode(String.self, forKey: .name)
+        self.type = try container.decode(AttachmentKind.self, forKey: .type)
+        self.mimeType = try container.decodeIfPresent(String.self, forKey: .mimeType)
+        self.localImageData = nil
     }
 }
 

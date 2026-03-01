@@ -8,7 +8,9 @@ struct GoogleSignInButton: View {
         Button(action: action) {
             HStack(spacing: 12) {
                 ZStack {
-                    Circle().fill(.white).frame(width: 24, height: 24)
+                    Circle().fill(.white)
+                        .frame(width: 24, height: 24)
+                        .shadow(color: Color.black.opacity(0.12), radius: 2, x: 0, y: 1)
                     Text("G")
                         .font(.system(size: 16, weight: .bold))
                         .foregroundStyle(Color(hex: "#4285F4"))

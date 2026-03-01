@@ -49,6 +49,16 @@ struct ChatInputView: View {
                         insertion: .move(edge: .bottom).combined(with: .opacity),
                         removal:   .move(edge: .bottom).combined(with: .opacity)
                     ))
+            } else if vm.isTranscribing {
+                // Transcribing state
+                TranscribingRow()
+                    .padding(.horizontal, 16)
+                    .padding(.top, 10)
+                    .padding(.bottom, 6)
+                    .transition(.asymmetric(
+                        insertion: .move(edge: .bottom).combined(with: .opacity),
+                        removal:   .move(edge: .bottom).combined(with: .opacity)
+                    ))
             } else if vm.isUploading {
                 // Uploading state
                 UploadingRow(progress: vm.uploadProgress)
@@ -146,6 +156,7 @@ struct ChatInputView: View {
         }
         .background(Color.mcBgPrimary)
         .animation(.mcSmooth, value: isRecording)
+        .animation(.mcSmooth, value: vm.isTranscribing)
         .animation(.mcSmooth, value: vm.isUploading)
         .animation(.mcSmooth, value: vm.attachments.count)
         .onChange(of: vm.isStreaming) { _, streaming in
@@ -271,26 +282,38 @@ struct ChatInputView: View {
     // MARK: - Recording
 
     private func startRecording() {
+        print("[Voice] startRecording() called")
         let session = AVAudioSession.sharedInstance()
         AVAudioApplication.requestRecordPermission { granted in
             DispatchQueue.main.async {
-                guard granted else { return }
+                guard granted else {
+                    print("[Voice] Microphone permission denied")
+                    return
+                }
+                print("[Voice] Microphone permission granted")
                 do {
                     try session.setCategory(.record, mode: .default)
                     try session.setActive(true)
+                    print("[Voice] Audio session activated")
                 } catch {
+                    print("[Voice] Audio session setup failed: \(error)")
                     return
                 }
                 let url = FileManager.default.temporaryDirectory.appendingPathComponent("recording.m4a")
+                print("[Voice] Recording to: \(url.path)")
                 let settings: [String: Any] = [
                     AVFormatIDKey: Int(kAudioFormatMPEG4AAC),
                     AVSampleRateKey: 44100,
                     AVNumberOfChannelsKey: 1,
                     AVEncoderAudioQualityKey: AVAudioQuality.high.rawValue
                 ]
-                guard let recorder = try? AVAudioRecorder(url: url, settings: settings) else { return }
+                guard let recorder = try? AVAudioRecorder(url: url, settings: settings) else {
+                    print("[Voice] Failed to create AVAudioRecorder")
+                    return
+                }
                 audioRecorder = recorder
-                audioRecorder?.record()
+                let started = audioRecorder?.record() ?? false
+                print("[Voice] Recording started: \(started)")
                 isRecording = true
                 duration    = 0
                 recordingTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { _ in
@@ -301,17 +324,31 @@ struct ChatInputView: View {
     }
 
     private func stopRecording() {
+        print("[Voice] stopRecording() called, duration=\(duration)")
         recordingTimer?.invalidate()
         audioRecorder?.stop()
         isRecording = false
-        guard let url = audioRecorder?.url else { return }
+        try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+        guard let url = audioRecorder?.url else {
+            print("[Voice] No audio URL from recorder — aborting")
+            return
+        }
+        let fileExists = FileManager.default.fileExists(atPath: url.path)
+        let fileSize = (try? FileManager.default.attributesOfItem(atPath: url.path)[.size] as? Int) ?? 0
+        print("[Voice] Audio file exists=\(fileExists), size=\(fileSize) bytes, path=\(url.path)")
         vm.isTranscribing = true
+        print("[Voice] Starting transcription request…")
         Task {
             do {
                 let text = try await UploadService.shared.transcribe(audioURL: url)
+                print("[Voice] Transcription succeeded, text length=\(text.count): \"\(text.prefix(100))\"")
                 vm.inputText += text
-            } catch {}
+            } catch {
+                print("[Voice] Transcription FAILED: \(error)")
+                vm.errorMessage = "Transcription failed. Please try again."
+            }
             vm.isTranscribing = false
+            print("[Voice] isTranscribing set to false")
         }
     }
 }
@@ -352,6 +389,28 @@ struct RecordingRow: View {
         let m = Int(t) / 60
         let s = Int(t) % 60
         return String(format: "%d:%02d", m, s)
+    }
+}
+
+// MARK: - Transcribing Row
+
+struct TranscribingRow: View {
+    var body: some View {
+        HStack(spacing: 12) {
+            ProgressView()
+                .progressViewStyle(.circular)
+                .scaleEffect(0.85)
+
+            Text("Transcribing…")
+                .font(.subheadline)
+                .foregroundStyle(.primary)
+
+            Spacer()
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .background(Color.mcBgSecondary)
+        .clipShape(RoundedRectangle(cornerRadius: 26))
     }
 }
 

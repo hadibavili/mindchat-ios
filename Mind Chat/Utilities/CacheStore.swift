@@ -4,10 +4,10 @@ import Combine
 // MARK: - Cache Key
 
 enum CacheKey {
-    case conversations           // TTL: 5min
-    case topicsTree              // TTL: 10min
-    case topicsStats             // TTL: 10min
-    case topicDetail(id: String) // TTL: 5min
+    case conversations           // TTL: 30min
+    case topicsTree              // TTL: 30min
+    case topicsStats             // TTL: 30min
+    case topicDetail(id: String) // TTL: 30min
     case settings                // TTL: 1hr  — disk-persisted
     case usage                   // TTL: 15min — disk-persisted
 
@@ -28,8 +28,8 @@ enum CacheKey {
         case .topicsTree:     return 10 * 60
         case .topicsStats:    return 10 * 60
         case .topicDetail:    return 5 * 60
-        case .settings:       return 5 * 60
-        case .usage:          return 15 * 60
+        case .settings:       return 30 * 24 * 60 * 60  // 30 days (refreshed in background on every launch)
+        case .usage:          return 30 * 24 * 60 * 60  // 30 days (refreshed in background on every launch)
         }
     }
 

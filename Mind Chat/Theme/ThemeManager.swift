@@ -35,7 +35,7 @@ final class ThemeManager: ObservableObject {
     }
 
     var accentColor: Color {
-        Color.accentPreset(accentColorId)
+        Color.UserAccent.adaptiveAccentColor(for: accentColorId)
     }
 
     var typography: AppTypography {

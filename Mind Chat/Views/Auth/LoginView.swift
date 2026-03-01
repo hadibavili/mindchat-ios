@@ -190,7 +190,7 @@ struct AuthTextField: View {
             .clipShape(RoundedRectangle(cornerRadius: 10))
             .overlay {
                 RoundedRectangle(cornerRadius: 10)
-                    .stroke(error != nil ? Color.red : Color.clear, lineWidth: 1)
+                    .stroke(error != nil ? Color.accentRed : Color.clear, lineWidth: 1)
             }
             if let error {
                 Text(error).font(.caption).foregroundStyle(Color.accentRed)
@@ -230,7 +230,7 @@ struct AuthSecureField: View {
             .clipShape(RoundedRectangle(cornerRadius: 10))
             .overlay {
                 RoundedRectangle(cornerRadius: 10)
-                    .stroke(error != nil ? Color.red : Color.clear, lineWidth: 1)
+                    .stroke(error != nil ? Color.accentRed : Color.clear, lineWidth: 1)
             }
             if let error {
                 Text(error).font(.caption).foregroundStyle(Color.accentRed)

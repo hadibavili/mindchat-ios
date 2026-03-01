@@ -85,7 +85,7 @@ struct KnowledgeSearchView: View {
         var range = lower.startIndex..<lower.endIndex
         while let found = lower.range(of: q, options: .caseInsensitive, range: range) {
             if let attrRange = Range(found, in: attributed) {
-                attributed[attrRange].backgroundColor = .yellow.withAlphaComponent(0.4)
+                attributed[attrRange].backgroundColor = UIColor(Color.searchHighlight)
             }
             range = found.upperBound..<lower.endIndex
         }

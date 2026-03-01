@@ -170,6 +170,9 @@ final class APIClient {
             }
             throw AppError.serverError("Bad request")
         default:
+            let rawBody = String(data: data.prefix(2000), encoding: .utf8) ?? "<non-utf8>"
+            print("[APIClient] HTTP \(http.statusCode) for \(req.url?.path ?? "?")")
+            print("[APIClient] Response body: \(rawBody)")
             if let errResp = try? JSONDecoder.mindChat.decode(ErrorResponse.self, from: data) {
                 throw AppError.serverError(errResp.error)
             }

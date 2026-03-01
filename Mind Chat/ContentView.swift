@@ -105,6 +105,7 @@ struct MainTabView: View {
         .task { await conversationsVM.load() }
         .task { await chatVM.loadSettings() }
         .task { await topicsVM.load() }
+        .task { await SettingsService.shared.refreshInBackground() }
         .onChange(of: appState.selectedConversationId) { _, id in
             guard let id else { return }
             chatVM.newChat()

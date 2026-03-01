@@ -123,6 +123,12 @@ extension Color {
     static let accentPurple = Color(hex: "#9065b0")
     static let accentPink   = Color(hex: "#c14c8a")
     static let accentCyan   = Color(hex: "#2e9bb0")
+
+    /// Adaptive search-highlight background: warm yellow in light mode, dark amber in dark mode.
+    static let searchHighlight = adaptive(
+        light: Color(hex: "#fef08a").opacity(0.6),
+        dark:  Color(hex: "#854d0e").opacity(0.5)
+    )
 }
 
 // MARK: - User Accent Colors (customizable)
@@ -172,6 +178,22 @@ extension Color {
             case "red":    return redHover
             default:       return blackHover
             }
+        }
+
+        /// Dark-mode-safe variant per accent. "black" → zinc-500 (#71717a) so it's
+        /// visible against the near-black dark background (#09090b). All other accents
+        /// are already dark enough to stay legible in both modes.
+        static func darkColor(for name: String) -> Color {
+            switch name {
+            case "black": return Color(hex: "#71717a")   // zinc-500; contrast ~4.6:1 on #09090b
+            default:      return color(for: name)
+            }
+        }
+
+        /// Returns an adaptive Color that uses the light-mode hex in light mode and
+        /// `darkColor(for:)` in dark mode, matching the app's UITraitCollection.
+        static func adaptiveAccentColor(for name: String) -> Color {
+            Color.adaptive(light: color(for: name), dark: darkColor(for: name))
         }
     }
 

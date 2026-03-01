@@ -77,6 +77,11 @@ struct MessageBubble: View {
                 }
             } else if message.content.isEmpty && message.isStreaming {
                 EmptyView()
+            } else if !message.isStreaming, let result = QuestionForm.parse(from: message.content) {
+                if let preamble = result.preamble {
+                    MarkdownView(text: preamble)
+                }
+                QuestionFormView(form: result.form, messageId: message.id, vm: vm)
             } else {
                 MarkdownView(text: message.content)
 
@@ -97,7 +102,9 @@ struct MessageBubble: View {
             }
 
             // Action bar (copy/regenerate) for completed assistant messages
-            if !message.isStreaming && !message.isError && !message.content.isEmpty {
+            if !message.isStreaming && !message.isError && !message.content.isEmpty,
+               QuestionForm.parse(from: message.content) == nil || vm.submittedForms.contains(message.id) {
+
                 assistantActionBar
             }
         }

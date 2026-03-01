@@ -37,6 +37,13 @@ final class ChatViewModel: ObservableObject {
     @Published var extractedTopics: [ExtractedTopic] = []
     @Published var topicFocus: TopicFocus?
 
+    // MARK: - Question Form State
+
+    /// Answers for question-form messages, keyed by message ID → question ID → answer text.
+    @Published var formAnswers: [String: [String: String]] = [:]
+    /// Set of message IDs whose question forms have been submitted.
+    @Published var submittedForms: Set<String> = []
+
     // MARK: - Settings (loaded from server)
 
     @Published var provider: AIProvider   = .openai
@@ -73,6 +80,14 @@ final class ChatViewModel: ObservableObject {
         defer { isLoading = false }
         do {
             messages = try await chat.messages(conversationId: id, highlight: highlight)
+            // Auto-detect submitted question forms from history
+            for (idx, msg) in messages.enumerated() {
+                guard msg.role == .assistant,
+                      QuestionForm.parse(from: msg.content) != nil,
+                      idx + 1 < messages.count,
+                      messages[idx + 1].role == .user else { continue }
+                submittedForms.insert(msg.id)
+            }
             if let hl = highlight {
                 highlightMessageId = hl
                 DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
@@ -89,9 +104,13 @@ final class ChatViewModel: ObservableObject {
     // MARK: - Send
 
     func send() async {
-        let text = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
+        var text = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
         let pendingAttachments = attachments
         guard !text.isEmpty || !pendingAttachments.isEmpty else { return }
+        // Server requires a non-empty message; provide a default for attachment-only sends
+        if text.isEmpty && !pendingAttachments.isEmpty {
+            text = "What's in this?"
+        }
         guard !isStreaming else { return }
 
         // Capture topic focus before clearing state
@@ -394,6 +413,8 @@ final class ChatViewModel: ObservableObject {
         extractedTopics   = []
         errorMessage      = nil
         topicFocus        = nil
+        formAnswers       = [:]
+        submittedForms    = []
     }
 
     // MARK: - Settings
@@ -440,5 +461,33 @@ final class ChatViewModel: ObservableObject {
 
     func useSuggestion(_ text: String) {
         inputText = text
+    }
+
+    // MARK: - Question Form
+
+    func submitQuestionForm(messageId: String, form: QuestionForm) async {
+        let answers = formAnswers[messageId] ?? [:]
+
+        let combined = form.questions.map { question in
+            let answer = answers[question.id]?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            return "\(question.label)\n\(answer.isEmpty ? "(skipped)" : answer)"
+        }.joined(separator: "\n\n")
+
+        submittedForms.insert(messageId)
+
+        inputText = combined
+        await send()
+    }
+
+    func formAnswerBinding(messageId: String, questionId: String) -> Binding<String> {
+        Binding(
+            get: { self.formAnswers[messageId]?[questionId] ?? "" },
+            set: { newValue in
+                if self.formAnswers[messageId] == nil {
+                    self.formAnswers[messageId] = [:]
+                }
+                self.formAnswers[messageId]?[questionId] = newValue
+            }
+        )
     }
 }

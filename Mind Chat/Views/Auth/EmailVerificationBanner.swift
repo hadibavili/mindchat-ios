@@ -38,7 +38,7 @@ struct EmailVerificationBanner: View {
             .disabled(cooldown > 0 || isSending)
         }
         .padding()
-        .background(Color.orange.opacity(0.12))
+        .background(Color.accentOrange.opacity(0.12))
         .clipShape(RoundedRectangle(cornerRadius: 10))
         .onDisappear { timer?.invalidate() }
     }
