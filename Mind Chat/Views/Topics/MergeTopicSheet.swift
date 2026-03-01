@@ -50,7 +50,7 @@ struct MergeTopicSheet: View {
                             Spacer()
                             if selectedTargetId == topic.id {
                                 Image(systemName: "checkmark")
-                                    .foregroundStyle(Color.accentColor)
+                                    .foregroundStyle(Color.mcTextPrimary)
                             }
                         }
                     }

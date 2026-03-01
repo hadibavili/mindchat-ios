@@ -110,7 +110,7 @@ private struct SaveButton: View {
 
     private var buttonBackground: Color {
         if vm.saveSuccess { return Color.accentGreen.opacity(0.15) }
-        if vm.isDirty { return Color.accentColor }
+        if vm.isDirty { return Color.mcTextPrimary }
         return Color(.systemFill)
     }
 

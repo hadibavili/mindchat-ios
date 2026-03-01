@@ -83,7 +83,7 @@ struct AIModelSection: View {
                             Text("Security tips")
                                 .font(.caption)
                         }
-                        .foregroundStyle(Color.accentColor)
+                        .foregroundStyle(Color.mcTextSecondary)
                     }
 
                     if showSecurityTips {

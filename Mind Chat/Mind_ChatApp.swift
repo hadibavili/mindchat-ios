@@ -12,7 +12,7 @@ struct Mind_ChatApp: App {
                 .environmentObject(appState)
                 .environmentObject(themeManager)
                 .preferredColorScheme(themeManager.preferredColorScheme)
-                .tint(themeManager.accentColor)
+                .tint(Color.mcTextPrimary)
                 .appTypography(themeManager.typography)
                 .dynamicTypeSize(themeManager.dynamicTypeSize)
                 .environment(\.legibilityWeight, themeManager.highContrast ? .bold : nil)

@@ -246,7 +246,7 @@ struct SidebarView: View {
                 // Avatar
                 ZStack {
                     Circle()
-                        .fill(Color.accentColor.gradient)
+                        .fill(Color.mcTextPrimary.gradient)
                         .frame(width: 34, height: 34)
                     Text(initials)
                         .font(.system(size: 12, weight: .bold))

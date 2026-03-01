@@ -10,7 +10,7 @@ struct LoginView: View {
         NavigationStack {
             ZStack {
                 LinearGradient(
-                    colors: [Color.accentColor.opacity(0.12), Color.mcBgPrimary],
+                    colors: [Color.mcTextPrimary.opacity(0.12), Color.mcBgPrimary],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
                 )
@@ -22,7 +22,7 @@ struct LoginView: View {
                         VStack(spacing: 8) {
                             Image(systemName: "brain.head.profile")
                                 .font(.system(size: 56))
-                                .foregroundStyle(Color.accentColor)
+                                .foregroundStyle(Color.mcTextPrimary)
                             Text("MindChat")
                                 .font(.largeTitle.bold())
                             Text(vm.mode == .signIn ? "Welcome back" : "Create your account")
@@ -79,7 +79,7 @@ struct LoginView: View {
                                         Haptics.selection()
                                     } label: {
                                         Image(systemName: vm.acceptedTerms ? "checkmark.square.fill" : "square")
-                                            .foregroundStyle(vm.acceptedTerms ? Color.accentColor : .secondary)
+                                            .foregroundStyle(vm.acceptedTerms ? Color.mcTextPrimary : .secondary)
                                     }
                                     Text("I agree to the Terms of Service and Privacy Policy")
                                         .font(.caption)
@@ -98,7 +98,7 @@ struct LoginView: View {
                                         ForgotPasswordView()
                                     }
                                     .font(.caption)
-                                    .foregroundStyle(Color.accentColor)
+                                    .foregroundStyle(Color.mcTextPrimary)
                                 }
                             }
                         }
@@ -134,7 +134,7 @@ struct LoginView: View {
                             }
                             .frame(maxWidth: .infinity)
                             .frame(height: 50)
-                            .background(Color.accentColor)
+                            .background(Color.mcTextPrimary)
                             .foregroundStyle(.white)
                             .clipShape(RoundedRectangle(cornerRadius: 12))
                         }

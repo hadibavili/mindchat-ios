@@ -63,7 +63,7 @@ struct TypeFilterPill: View {
                 .font(.caption.bold())
                 .padding(.horizontal, 12)
                 .padding(.vertical, 6)
-                .background(isSelected ? Color.accentColor : Color.mcBgSecondary)
+                .background(isSelected ? Color.mcTextPrimary : Color.mcBgSecondary)
                 .foregroundStyle(isSelected ? .white : .primary)
                 .clipShape(Capsule())
         }

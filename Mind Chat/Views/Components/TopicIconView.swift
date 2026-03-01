@@ -71,7 +71,7 @@ struct TopicIconView: View {
     var body: some View {
         ZStack {
             RoundedRectangle(cornerRadius: size * 0.25)
-                .fill(Color.accentColor.opacity(0.15))
+                .fill(Color.mcTextSecondary.opacity(0.15))
                 .frame(width: size, height: size)
 
             if isEmoji {
@@ -80,7 +80,7 @@ struct TopicIconView: View {
             } else {
                 Image(systemName: sfSymbol)
                     .font(.system(size: size * 0.45))
-                    .foregroundStyle(Color.accentColor)
+                    .foregroundStyle(Color.mcTextSecondary)
             }
         }
     }

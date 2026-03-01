@@ -37,7 +37,7 @@ private struct ChatModePicker: View {
                 Spacer()
                 if selected == mode {
                     Image(systemName: "checkmark.circle.fill")
-                        .foregroundStyle(Color.accentColor)
+                        .foregroundStyle(Color.mcTextPrimary)
                         .font(.body)
                 }
             }

@@ -139,7 +139,7 @@ struct TopicHeaderView: View {
                     .foregroundStyle(.white)
                     .padding(.horizontal, 20)
                     .padding(.vertical, 12)
-                    .background(Color.accentColor)
+                    .background(Color.mcTextPrimary)
                     .clipShape(Capsule())
             }
             .padding(.top, 4)

@@ -80,7 +80,7 @@ struct QuestionFormView: View {
     private func numberBadge(_ number: Int, questionId: String) -> some View {
         let color: Color = isSubmitted
             ? .accentGreen
-            : (focusedField == questionId ? .accentColor : .mcTextTertiary)
+            : (focusedField == questionId ? .mcTextPrimary : .mcTextTertiary)
 
         return Text("\(number)")
             .font(.caption2.weight(.bold))
@@ -112,7 +112,7 @@ struct QuestionFormView: View {
         .overlay(
             RoundedRectangle(cornerRadius: 10)
                 .stroke(
-                    isFocused ? Color.accentColor : Color.mcBorderDefault,
+                    isFocused ? Color.mcTextPrimary : Color.mcBorderDefault,
                     lineWidth: isFocused ? 1.5 : 1
                 )
         )
@@ -164,10 +164,10 @@ struct QuestionFormView: View {
             .foregroundStyle(.white)
             .frame(maxWidth: .infinity)
             .padding(.vertical, 14)
-            .background(hasAnyAnswer ? Color.accentColor : Color.mcBgActive)
+            .background(hasAnyAnswer ? Color.mcTextPrimary : Color.mcBgActive)
             .clipShape(RoundedRectangle(cornerRadius: 12))
             .shadow(
-                color: hasAnyAnswer ? Color.accentColor.opacity(0.25) : .clear,
+                color: hasAnyAnswer ? Color.mcTextPrimary.opacity(0.25) : .clear,
                 radius: 8, y: 4
             )
         }

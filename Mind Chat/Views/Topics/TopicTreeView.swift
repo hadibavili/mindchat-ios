@@ -81,7 +81,7 @@ struct TopicNodeView: View {
             }
             .padding(.vertical, 4)
             .padding(.horizontal, 8)
-            .background(isSelected ? Color.accentColor.opacity(0.1) : Color.clear)
+            .background(isSelected ? Color.mcTextPrimary.opacity(0.1) : Color.clear)
             .clipShape(RoundedRectangle(cornerRadius: 6))
         }
         .buttonStyle(.plain)

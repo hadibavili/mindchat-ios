@@ -12,7 +12,7 @@ struct ForgotPasswordView: View {
                     VStack(spacing: 20) {
                         Image(systemName: "envelope.badge.checkmark")
                             .font(.system(size: 64))
-                            .foregroundStyle(Color.accentColor)
+                            .foregroundStyle(Color.mcTextPrimary)
                         Text("Check your inbox")
                             .font(.title2.bold())
                         Text("If an account exists for \(vm.forgotEmail), you'll receive a password reset link shortly.")
@@ -24,14 +24,14 @@ struct ForgotPasswordView: View {
                             vm.forgotEmail = ""
                         }
                         .font(.subheadline)
-                        .foregroundStyle(Color.accentColor)
+                        .foregroundStyle(Color.mcTextPrimary)
                     }
                     .padding(.top, 60)
                 } else {
                     VStack(spacing: 8) {
                         Image(systemName: "lock.open")
                             .font(.system(size: 56))
-                            .foregroundStyle(Color.accentColor)
+                            .foregroundStyle(Color.mcTextPrimary)
                         Text("Reset password")
                             .font(.title2.bold())
                         Text("Enter your email and we'll send you a reset link.")
@@ -63,7 +63,7 @@ struct ForgotPasswordView: View {
                             }
                             .frame(maxWidth: .infinity)
                             .frame(height: 50)
-                            .background(Color.accentColor)
+                            .background(Color.mcTextPrimary)
                             .foregroundStyle(.white)
                             .clipShape(RoundedRectangle(cornerRadius: 12))
                         }

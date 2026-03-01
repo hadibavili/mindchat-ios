@@ -13,7 +13,7 @@ struct ThinkingIndicator: View {
             HStack(spacing: 5) {
                 ForEach(0..<3, id: \.self) { i in
                     Circle()
-                        .fill(Color.accentColor.opacity(0.7))
+                        .fill(Color.mcTextSecondary.opacity(0.7))
                         .frame(width: 8, height: 8)
                         .scaleEffect(dotPhase == i ? 1.4 : 1.0)
                         .animation(.easeInOut(duration: 0.3), value: dotPhase)

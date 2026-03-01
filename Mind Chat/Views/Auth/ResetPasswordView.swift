@@ -15,7 +15,7 @@ struct ResetPasswordView: View {
                     VStack(spacing: 8) {
                         Image(systemName: vm.resetSuccess ? "checkmark.circle.fill" : "lock.rotation")
                             .font(.system(size: 64))
-                            .foregroundStyle(vm.resetSuccess ? .green : Color.accentColor)
+                            .foregroundStyle(vm.resetSuccess ? .green : Color.mcTextPrimary)
                         Text(vm.resetSuccess ? "Password updated!" : "New password")
                             .font(.title2.bold())
                         if vm.resetSuccess {
@@ -58,7 +58,7 @@ struct ResetPasswordView: View {
                                 }
                                 .frame(maxWidth: .infinity)
                                 .frame(height: 50)
-                                .background(Color.accentColor)
+                                .background(Color.mcTextPrimary)
                                 .foregroundStyle(.white)
                                 .clipShape(RoundedRectangle(cornerRadius: 12))
                             }

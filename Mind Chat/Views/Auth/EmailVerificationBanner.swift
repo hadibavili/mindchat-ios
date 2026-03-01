@@ -32,7 +32,7 @@ struct EmailVerificationBanner: View {
                 } else {
                     Text("Resend")
                         .font(.caption.bold())
-                        .foregroundStyle(Color.accentColor)
+                        .foregroundStyle(Color.mcTextPrimary)
                 }
             }
             .disabled(cooldown > 0 || isSending)

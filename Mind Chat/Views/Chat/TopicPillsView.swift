@@ -73,14 +73,14 @@ struct SummaryPill: View {
         HStack(spacing: 5) {
             Image(systemName: "star.fill")
                 .font(.caption2)
-                .foregroundStyle(Color.accentColor)
+                .foregroundStyle(Color.mcTextPrimary)
             Text(count == 1 ? "1 thing remembered" : "\(count) things remembered")
                 .font(.caption.bold())
                 .foregroundStyle(.primary)
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 5)
-        .background(Color.accentColor.opacity(0.1))
+        .background(Color.mcTextPrimary.opacity(0.1))
         .clipShape(Capsule())
     }
 }
@@ -98,7 +98,7 @@ struct TopicPill: View {
                 if topic.isNew {
                     Image(systemName: "plus")
                         .font(.caption2.bold())
-                        .foregroundStyle(topic.isNew ? Color.accentColor : .secondary)
+                        .foregroundStyle(topic.isNew ? Color.mcTextPrimary : .secondary)
                 }
 
                 Text(topic.name)

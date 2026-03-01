@@ -295,6 +295,5 @@ extension Color {
 // MARK: - Bubble Styles
 
 extension ShapeStyle where Self == Color {
-    static var bubbleUser:      Color { Color.accentColor }
     static var bubbleAssistant: Color { Color.mcBgPrimary }
 }

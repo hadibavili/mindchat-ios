@@ -176,7 +176,7 @@ struct UpgradeBannerCard: View {
                     .font(.system(size: 18))
                     .foregroundStyle(.white)
                     .frame(width: 36, height: 36)
-                    .background(Color.accentColor)
+                    .background(Color.mcTextPrimary)
                     .clipShape(Circle())
 
                 VStack(alignment: .leading, spacing: 2) {

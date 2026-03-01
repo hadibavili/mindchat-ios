@@ -82,14 +82,14 @@ struct ChoiceFormView: View {
                 .padding(.vertical, 10)
                 .background(
                     isSelected
-                        ? Color.accentColor
+                        ? Color.mcTextPrimary
                         : (isSubmitted ? Color.mcBgSecondary.opacity(0.5) : Color.mcBgSecondary)
                 )
                 .clipShape(RoundedRectangle(cornerRadius: 10))
                 .overlay(
                     RoundedRectangle(cornerRadius: 10)
                         .stroke(
-                            isSelected ? Color.accentColor : Color.mcBorderDefault,
+                            isSelected ? Color.mcTextPrimary : Color.mcBorderDefault,
                             lineWidth: isSelected ? 0 : 1
                         )
                 )

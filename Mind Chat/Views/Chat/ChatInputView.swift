@@ -8,6 +8,7 @@ private let kCharLimit = 4000
 struct ChatInputView: View {
 
     @ObservedObject var vm: ChatViewModel
+    @EnvironmentObject private var themeManager: ThemeManager
     @FocusState private var isInputFocused: Bool
     @State private var selectedPhotoItems: [PhotosPickerItem] = []
     @State private var showPhotoPicker = false
@@ -17,8 +18,15 @@ struct ChatInputView: View {
     @State private var audioRecorder: AVAudioRecorder?
     @State private var recordingTimer: Timer?
     @State private var duration: TimeInterval = 0
+    @State private var dismissedRecommendationIntent: QueryIntent?
 
     private var charCount: Int { vm.inputText.count }
+
+    private var visibleRecommendation: ModelRecommendation? {
+        guard !vm.isStreaming, let rec = vm.modelRecommendation else { return nil }
+        if dismissedRecommendationIntent == rec.intent { return nil }
+        return rec
+    }
     private var isOverLimit: Bool { charCount > kCharLimit }
     private var showCounter: Bool { charCount > kCharLimit * 80 / 100 }
 
@@ -92,6 +100,25 @@ struct ChatInputView: View {
                         }
                         .padding(.horizontal, 14)
                         .padding(.top, 10)
+                    }
+
+                    // Model recommendation banner
+                    if let rec = visibleRecommendation {
+                        ModelRecommendationBanner(
+                            recommendation: rec,
+                            onUse: {
+                                Haptics.light()
+                                EventBus.shared.publish(.modelChanged(provider: rec.provider, model: rec.modelId))
+                                vm.modelRecommendation = nil
+                            },
+                            onDismiss: { dismissedRecommendationIntent = rec.intent }
+                        )
+                        .padding(.horizontal, 14)
+                        .padding(.top, 8)
+                        .transition(.asymmetric(
+                            insertion: .move(edge: .top).combined(with: .opacity),
+                            removal:   .move(edge: .top).combined(with: .opacity)
+                        ))
                     }
 
                     // Text field
@@ -204,6 +231,10 @@ struct ChatInputView: View {
             TopicPickerSheet(vm: vm)
         }
         .animation(.mcSmooth, value: vm.topicFocus?.id)
+        .animation(.mcGentle, value: visibleRecommendation?.modelId)
+        .onChange(of: vm.modelRecommendation?.intent) { _, new in
+            if let new, new != dismissedRecommendationIntent { dismissedRecommendationIntent = nil }
+        }
     }
 
     // MARK: - Send Button Helpers
@@ -224,7 +255,7 @@ struct ChatInputView: View {
     private var sendBgColor: Color {
         switch sendState {
         case .streaming:   return Color.mcTextPrimary
-        case .send:        return isOverLimit ? Color.mcBgActive : Color.accentColor
+        case .send:        return isOverLimit ? Color.mcBgActive : themeManager.accentColor
         case .mic:         return Color.mcBgActive
         case .disabledMic: return Color.mcBgSecondary
         }
@@ -404,7 +435,7 @@ struct RecordingRow: View {
 
             Button("Done", action: onStop)
                 .font(.subheadline.bold())
-                .foregroundStyle(Color.accentColor)
+                .foregroundStyle(Color.mcTextPrimary)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
@@ -468,6 +499,76 @@ struct UploadingRow: View {
         .padding(.vertical, 12)
         .background(Color.mcBgSecondary)
         .clipShape(RoundedRectangle(cornerRadius: 26))
+    }
+}
+
+// MARK: - Model Recommendation Banner
+
+private struct ModelRecommendationBanner: View {
+    let recommendation: ModelRecommendation
+    let onUse: () -> Void
+    let onDismiss: () -> Void
+
+    private var providerColor: Color {
+        switch recommendation.provider {
+        case .openai: return .providerOpenAI
+        case .claude: return .providerClaude
+        case .google: return .providerGoogle
+        case .xai:    return .providerXAI
+        }
+    }
+
+    var body: some View {
+        HStack(spacing: 8) {
+            // Intent icon in a tinted circle
+            Image(systemName: recommendation.intent.icon)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(providerColor)
+                .frame(width: 26, height: 26)
+                .background(providerColor.opacity(0.12))
+                .clipShape(Circle())
+
+            // Label
+            Text("Try **\(recommendation.modelLabel)** for \(recommendation.intent.description)")
+                .font(.caption)
+                .foregroundStyle(Color.mcTextSecondary)
+                .lineLimit(1)
+
+            Spacer(minLength: 4)
+
+            // "Use" button
+            Button(action: onUse) {
+                Text("Use")
+                    .font(.caption.bold())
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 4)
+                    .background(providerColor)
+                    .clipShape(Capsule())
+            }
+            .buttonStyle(.plain)
+
+            // Dismiss button
+            Button(action: onDismiss) {
+                Image(systemName: "xmark")
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(Color.mcTextTertiary)
+                    .frame(width: 20, height: 20)
+                    .background(Color.mcBgActive)
+                    .clipShape(Circle())
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 7)
+        .background(
+            RoundedRectangle(cornerRadius: 10)
+                .fill(providerColor.opacity(0.07))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10)
+                        .stroke(providerColor.opacity(0.2), lineWidth: 1)
+                )
+        )
     }
 }
 

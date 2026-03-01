@@ -32,7 +32,7 @@ struct OnboardingView: View {
                     VStack(spacing: 24) {
                         Image(systemName: steps[i].icon)
                             .font(.system(size: 80))
-                            .foregroundStyle(Color.accentColor)
+                            .foregroundStyle(Color.mcTextPrimary)
                             .padding(.bottom, 8)
 
                         Text(steps[i].title)
@@ -63,7 +63,7 @@ struct OnboardingView: View {
                             .fontWeight(.semibold)
                             .frame(maxWidth: .infinity)
                             .frame(height: 52)
-                            .background(Color.accentColor)
+                            .background(Color.mcTextPrimary)
                             .foregroundStyle(.white)
                             .clipShape(RoundedRectangle(cornerRadius: 14))
                     }
@@ -74,7 +74,7 @@ struct OnboardingView: View {
                     } label: {
                         Text("Next")
                             .font(.headline)
-                            .foregroundStyle(Color.accentColor)
+                            .foregroundStyle(Color.mcTextPrimary)
                     }
                 }
 

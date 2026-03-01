@@ -151,7 +151,7 @@ struct FactItemView: View {
             Spacer()
             Button("Save") { Task { await save() } }
                 .font(.caption.bold())
-                .foregroundStyle(Color.accentColor)
+                .foregroundStyle(Color.mcTextPrimary)
         }
     }
 
@@ -202,7 +202,7 @@ struct FactItemView: View {
         Button(action: action) {
             Label(label, systemImage: icon)
                 .font(.caption)
-                .foregroundStyle(isDestructive ? Color.accentRed : Color.accentColor)
+                .foregroundStyle(isDestructive ? Color.accentRed : Color.mcTextPrimary)
                 .padding(.horizontal, 10)
                 .padding(.vertical, 6)
         }

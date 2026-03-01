@@ -5,6 +5,7 @@ struct MessageBubble: View {
     let message: ChatMessage
     var isHighlighted: Bool = false
     @ObservedObject var vm: ChatViewModel
+    @EnvironmentObject private var themeManager: ThemeManager
     @State private var showImageViewer = false
     @State private var selectedImageURL: String?
     @State private var showCopied = false
@@ -47,7 +48,7 @@ struct MessageBubble: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 6)
-        .background(isHighlighted ? Color.accentColor.opacity(0.07) : Color.clear)
+        .background(isHighlighted ? themeManager.accentColor.opacity(0.07) : Color.clear)
         .animation(.easeInOut(duration: 0.4), value: isHighlighted)
         // Skip contextMenu on question-form messages — it blocks TextField interaction
         .modifier(ConditionalContextMenu(show: !isQuestionFormMessage) { contextMenuContent })
@@ -76,7 +77,7 @@ struct MessageBubble: View {
                         .foregroundStyle(.white)
                         .padding(.horizontal, 16)
                         .padding(.vertical, 11)
-                        .background(Color.accentColor)
+                        .background(themeManager.accentColor)
                         .clipShape(RoundedRectangle(cornerRadius: 18))
                 }
             }

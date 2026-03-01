@@ -9,11 +9,11 @@ struct TopicFocusChip: View {
         HStack(spacing: 6) {
             Image(systemName: "brain.head.profile")
                 .font(.system(size: 12, weight: .semibold))
-                .foregroundStyle(Color.accentColor)
+                .foregroundStyle(Color.mcTextPrimary)
 
             Text(focus.name)
                 .font(.caption.bold())
-                .foregroundStyle(Color.accentColor)
+                .foregroundStyle(Color.mcTextPrimary)
                 .lineLimit(1)
 
             if focus.factCount > 0 {
@@ -37,7 +37,7 @@ struct TopicFocusChip: View {
         .padding(.leading, 10)
         .padding(.trailing, 6)
         .padding(.vertical, 6)
-        .background(Color.accentColor.opacity(0.1))
+        .background(Color.mcTextPrimary.opacity(0.1))
         .clipShape(Capsule())
         .transition(.chipAppear)
     }

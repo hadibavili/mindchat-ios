@@ -17,7 +17,7 @@ struct AccountSection: View {
                 HStack(spacing: 12) {
                     Image(systemName: "person.circle.fill")
                         .font(.system(size: 40))
-                        .foregroundStyle(Color.accentColor)
+                        .foregroundStyle(Color.mcTextPrimary)
                     VStack(alignment: .leading, spacing: 2) {
                         Text(displayName ?? displayEmail)
                             .fontWeight(.semibold)

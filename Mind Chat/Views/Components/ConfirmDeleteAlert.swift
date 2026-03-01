@@ -45,7 +45,7 @@ struct ConfirmDeleteAlert: View {
                 Button("Cancel") {
                     onConfirm(false)
                 }
-                .foregroundStyle(Color.accentColor)
+                .foregroundStyle(Color.mcTextPrimary)
             }
             .padding()
             .navigationBarHidden(true)

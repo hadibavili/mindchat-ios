@@ -10,7 +10,7 @@ struct ScrollToBottomButton: View {
                 .font(.system(size: 13, weight: .bold))
                 .foregroundStyle(.white)
                 .padding(10)
-                .background(Color.accentColor)
+                .background(Color.mcTextPrimary)
                 .clipShape(Circle())
                 .shadow(color: .black.opacity(0.2), radius: 4, x: 0, y: 2)
         }

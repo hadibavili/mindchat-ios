@@ -5,7 +5,7 @@ struct ExtractingIndicator: View {
         HStack(spacing: 10) {
             ProgressView()
                 .scaleEffect(0.8)
-                .tint(Color.accentColor)
+                .tint(Color.mcTextSecondary)
             Text("Extracting memories…")
                 .font(.caption)
                 .foregroundStyle(.secondary)
