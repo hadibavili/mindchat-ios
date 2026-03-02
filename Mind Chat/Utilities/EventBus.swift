@@ -12,6 +12,8 @@ enum AppEvent: Sendable {
     case emailVerified
     case navigateToMessage(conversationId: String, messageId: String)
     case startChatWithTopic(topicId: String, topicName: String, factCount: Int)
+    case appMovedToBackground
+    case appReturnedToForeground
 }
 
 // MARK: - Event Bus

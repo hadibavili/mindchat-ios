@@ -54,6 +54,7 @@ final class ChatViewModel: ObservableObject {
     @Published var voiceEnabled: Bool     = false
     @Published var imageUploadsEnabled: Bool = false
     @Published var showMemoryIndicators: Bool = true
+    @Published var modelRecommendation: ModelRecommendation?
 
     // MARK: - Image Cache
     // Keyed by attachment ID. Populated once per attachment, survives re-renders.
@@ -79,10 +80,28 @@ final class ChatViewModel: ObservableObject {
         EventBus.shared.events
             .receive(on: RunLoop.main)
             .sink { [weak self] event in
-                if case .modelChanged(let p, let m) = event {
+                switch event {
+                case .modelChanged(let p, let m):
                     self?.provider = p
                     self?.model    = m
+                    self?.modelRecommendation = nil
+                case .appMovedToBackground:
+                    if self?.isStreaming == true {
+                        BackgroundStreamManager.shared.beginBackgroundProcessing()
+                    }
+                case .appReturnedToForeground:
+                    self?.handleForegroundReturn()
+                default:
+                    break
                 }
+            }
+            .store(in: &cancellables)
+
+        $inputText
+            .debounce(for: .milliseconds(500), scheduler: RunLoop.main)
+            .sink { [weak self] text in
+                print("[ModelRec] debounce fired, text='\(text.prefix(40))'")
+                self?.updateModelRecommendation(for: text)
             }
             .store(in: &cancellables)
     }
@@ -120,6 +139,8 @@ final class ChatViewModel: ObservableObject {
     // MARK: - Send
 
     func send() async {
+        Task { await NotificationManager.shared.requestPermissionIfNeeded() }
+
         let sendStart = Date()
         print("[Timing] ▶ send() called — T+0.000s")
         var text = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -135,9 +156,10 @@ final class ChatViewModel: ObservableObject {
         let currentTopicFocus = topicFocus
 
         // Lock the UI immediately so the button can't be tapped again
-        inputText       = ""
-        attachments     = []
-        extractedTopics = []
+        inputText           = ""
+        modelRecommendation = nil
+        attachments         = []
+        extractedTopics     = []
         errorMessage    = nil
         topicFocus      = nil
         isStreaming     = true
@@ -358,6 +380,14 @@ final class ChatViewModel: ObservableObject {
             messages[idx].isError = true
             messages[idx].content = error
         }
+
+        let bgManager = BackgroundStreamManager.shared
+        if bgManager.isInBackground && error == nil {
+            let title = conversationTitle ?? "MindChat"
+            let preview = messages[idx].content
+            NotificationManager.shared.notifyResponseReady(title: title, preview: preview)
+            bgManager.streamDidComplete()
+        }
     }
 
     // MARK: - Stop Streaming
@@ -369,6 +399,24 @@ final class ChatViewModel: ObservableObject {
             messages[idx].isStreaming = false
         }
         isStreaming = false
+    }
+
+    // MARK: - Background Recovery
+
+    private func handleForegroundReturn() {
+        let bgManager = BackgroundStreamManager.shared
+        guard bgManager.streamInterruptedByExpiry, let convId = conversationId else { return }
+
+        stopStreaming()
+
+        Task {
+            do {
+                messages = try await chat.messages(conversationId: convId)
+                ToastManager.shared.info("Response loaded from server")
+            } catch {
+                print("[Background] Failed to recover messages: \(error)")
+            }
+        }
     }
 
     // MARK: - Message Actions
@@ -477,6 +525,17 @@ final class ChatViewModel: ObservableObject {
         } catch {
             print("[ChatViewModel] getUsage failed: \(error)")
         }
+        updateModelRecommendation(for: inputText)
+    }
+
+    private func updateModelRecommendation(for text: String) {
+        let intent = QueryIntentDetector.detectIntent(in: text)
+        let rec = QueryIntentDetector.recommend(
+            for: intent, plan: plan,
+            currentProvider: provider, currentModelId: model
+        )
+        print("[ModelRec] intent=\(intent) plan=\(plan.rawValue) provider=\(provider.rawValue) → rec=\(rec?.modelId ?? "nil")")
+        if rec != modelRecommendation { modelRecommendation = rec }
     }
 
     // MARK: - Persona

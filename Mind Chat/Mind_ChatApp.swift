@@ -5,6 +5,7 @@ struct Mind_ChatApp: App {
 
     @StateObject private var appState    = AppState()
     @StateObject private var themeManager = ThemeManager()
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some Scene {
         WindowGroup {
@@ -26,6 +27,18 @@ struct Mind_ChatApp: App {
                     OnboardingView()
                         .environmentObject(appState)
                 }
+        }
+        .onChange(of: scenePhase) { _, newPhase in
+            switch newPhase {
+            case .background:
+                EventBus.shared.publish(.appMovedToBackground)
+            case .active:
+                BackgroundStreamManager.shared.didReturnToForeground()
+                NotificationManager.shared.clearDelivered()
+                EventBus.shared.publish(.appReturnedToForeground)
+            default:
+                break
+            }
         }
     }
 }

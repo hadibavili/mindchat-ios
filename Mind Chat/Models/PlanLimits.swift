@@ -29,7 +29,8 @@ let PLAN_LIMITS: [PlanType: PlanLimits] = [
         models: [
             "gpt-5-nano", "gpt-4.1-mini",
             "claude-haiku-4-5-20251001",
-            "gemini-2.5-flash"
+            "gemini-2.5-flash",
+            "grok-3-mini"
         ]
     ),
     .trial: PlanLimits(
@@ -48,7 +49,9 @@ let PLAN_LIMITS: [PlanType: PlanLimits] = [
             "claude-haiku-4-5-20251001",
             "claude-sonnet-4-6", "claude-sonnet-4-5",
             "gemini-2.5-flash",
-            "gemini-3-flash-preview", "gemini-2.5-pro"
+            "gemini-3-flash-preview", "gemini-2.5-pro",
+            "grok-3-mini",
+            "grok-4-1-fast-reasoning", "grok-3"
         ]
     ),
     .pro: PlanLimits(
@@ -67,7 +70,9 @@ let PLAN_LIMITS: [PlanType: PlanLimits] = [
             "claude-haiku-4-5-20251001",
             "claude-sonnet-4-6", "claude-sonnet-4-5",
             "gemini-2.5-flash",
-            "gemini-3-flash-preview", "gemini-2.5-pro"
+            "gemini-3-flash-preview", "gemini-2.5-pro",
+            "grok-3-mini",
+            "grok-4-1-fast-reasoning", "grok-3"
         ]
     ),
     .premium: PlanLimits(
@@ -89,7 +94,9 @@ let PLAN_LIMITS: [PlanType: PlanLimits] = [
             "claude-opus-4-6",
             "gemini-2.5-flash",
             "gemini-3-flash-preview", "gemini-2.5-pro",
-            "gemini-3.1-pro-preview"
+            "gemini-3.1-pro-preview",
+            "grok-3-mini",
+            "grok-4-1-fast-reasoning", "grok-3"
         ]
     )
 ]
@@ -148,11 +155,11 @@ let MODEL_OPTIONS: [ModelOption] = [
     ModelOption(id: "gemini-2.5-pro",          label: "Gemini 2.5 Pro",    provider: .google, tier: .pro),
     // Google — premium tier
     ModelOption(id: "gemini-3.1-pro-preview",  label: "Gemini 3.1 Pro",    provider: .google, tier: .premium),
-    // xAI — free tier (coming soon)
-    ModelOption(id: "grok-3-mini",             label: "Grok 3 Mini",       provider: .xai, tier: .free,    comingSoon: true),
-    // xAI — pro tier (coming soon)
-    ModelOption(id: "grok-4-1-fast-reasoning", label: "Grok 4.1 Fast",     provider: .xai, tier: .pro,     comingSoon: true),
-    ModelOption(id: "grok-3",                  label: "Grok 3",            provider: .xai, tier: .pro,     comingSoon: true),
+    // xAI — free tier
+    ModelOption(id: "grok-3-mini",             label: "Grok 3 Mini",       provider: .xai, tier: .free),
+    // xAI — pro tier
+    ModelOption(id: "grok-4-1-fast-reasoning", label: "Grok 4.1 Fast",     provider: .xai, tier: .pro),
+    ModelOption(id: "grok-3",                  label: "Grok 3",            provider: .xai, tier: .pro),
 ]
 
 // MARK: - Plan → Accessible Model Tiers
@@ -188,7 +195,7 @@ let PROVIDER_HELPER_TEXT: [AIProvider: String] = [
     .openai: "GPT-4.1 Mini is recommended for free tier. Upgrade for GPT-4.1 and GPT-5.",
     .claude: "Haiku 4.5 is recommended for free tier. Upgrade for Sonnet and Opus.",
     .google: "Gemini 2.5 Flash is fast and capable. Upgrade for Gemini 3.",
-    .xai:    "xAI models are coming soon."
+    .xai:    "Grok 3 Mini is available on free tier. Upgrade for Grok 4.1 Fast and Grok 3."
 ]
 
 // MARK: - API Key Placeholders

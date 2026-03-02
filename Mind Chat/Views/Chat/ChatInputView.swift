@@ -255,7 +255,7 @@ struct ChatInputView: View {
     private var sendBgColor: Color {
         switch sendState {
         case .streaming:   return Color.mcTextPrimary
-        case .send:        return isOverLimit ? Color.mcBgActive : themeManager.accentColor
+        case .send:        return isOverLimit ? Color.mcBgActive : Color.mcTextPrimary
         case .mic:         return Color.mcBgActive
         case .disabledMic: return Color.mcBgSecondary
         }
@@ -264,7 +264,7 @@ struct ChatInputView: View {
     private var sendIconColor: Color {
         switch sendState {
         case .streaming:   return Color.mcBgPrimary
-        case .send:        return .white
+        case .send:        return Color.mcBgPrimary
         case .mic:         return Color.mcTextPrimary
         case .disabledMic: return Color.mcTextTertiary
         }
