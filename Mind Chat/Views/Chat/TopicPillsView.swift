@@ -72,10 +72,10 @@ struct SummaryPill: View {
     var body: some View {
         HStack(spacing: 5) {
             Image(systemName: "star.fill")
-                .font(.caption2)
+                .font(.caption)
                 .foregroundStyle(Color.mcTextPrimary)
             Text(count == 1 ? "1 thing remembered" : "\(count) things remembered")
-                .font(.caption.bold())
+                .font(.footnote.weight(.medium))
                 .foregroundStyle(.primary)
         }
         .padding(.horizontal, 10)
@@ -97,16 +97,16 @@ struct TopicPill: View {
             HStack(spacing: 5) {
                 if topic.isNew {
                     Image(systemName: "plus")
-                        .font(.caption2.bold())
+                        .font(.caption.weight(.medium))
                         .foregroundStyle(topic.isNew ? Color.mcTextPrimary : .secondary)
                 }
 
                 Text(topic.name)
-                    .font(.caption.bold())
+                    .font(.footnote.weight(.medium))
 
                 if !topic.isNew && topic.factsAdded > 0 {
                     Text("+\(topic.factsAdded)")
-                        .font(.caption2.bold())
+                        .font(.caption.weight(.medium))
                         .padding(.horizontal, 5)
                         .padding(.vertical, 2)
                         .background(Color.mcBgHover)

@@ -166,14 +166,14 @@ struct SidebarView: View {
             // Section label
             HStack {
                 Text("Memory")
-                    .font(.system(size: 12, weight: .medium))
+                    .font(.system(size: 13, weight: .medium))
                     .foregroundStyle(Color.mcTextTertiary)
                 Spacer()
                 Button {
                     dismiss { showKnowledge = true }
                 } label: {
                     Text("See all")
-                        .font(.system(size: 12, weight: .medium))
+                        .font(.system(size: 13, weight: .medium))
                         .foregroundStyle(Color.mcTextLink)
                 }
                 .buttonStyle(.plain)
@@ -192,7 +192,7 @@ struct SidebarView: View {
             // Empty state — no topics yet
             HStack {
                 Text("Memory")
-                    .font(.system(size: 12, weight: .medium))
+                    .font(.system(size: 13, weight: .medium))
                     .foregroundStyle(Color.mcTextTertiary)
                 Spacer()
             }
@@ -254,11 +254,11 @@ struct SidebarView: View {
                 }
                 VStack(alignment: .leading, spacing: 1) {
                     Text(appState.currentUser?.name ?? "User")
-                        .font(.system(size: 14, weight: .medium))
+                        .font(.system(size: 15, weight: .medium))
                         .foregroundStyle(Color.mcTextPrimary)
                         .lineLimit(1)
                     Text(planLabel)
-                        .font(.system(size: 12))
+                        .font(.system(size: 13))
                         .foregroundStyle(Color.mcTextTertiary)
                 }
                 Spacer()
@@ -368,13 +368,13 @@ struct DrawerTopicNode: View {
 
                     if node.totalFactCount > 0 {
                         Text("\(node.totalFactCount)")
-                            .font(.system(size: 12))
+                            .font(.system(size: 13))
                             .foregroundStyle(Color.mcTextTertiary)
                             .monospacedDigit()
                             .padding(.trailing, 16)
                     }
                 }
-                .padding(.vertical, 9)
+                .padding(.vertical, 11)
                 .contentShape(Rectangle())
             }
             .buttonStyle(SidebarRowButtonStyle())

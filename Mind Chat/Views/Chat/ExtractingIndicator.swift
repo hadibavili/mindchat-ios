@@ -7,7 +7,7 @@ struct ExtractingIndicator: View {
                 .scaleEffect(0.8)
                 .tint(Color.mcTextSecondary)
             Text("Extracting memories…")
-                .font(.caption)
+                .font(.footnote)
                 .foregroundStyle(.secondary)
         }
         .padding(.horizontal, 14)

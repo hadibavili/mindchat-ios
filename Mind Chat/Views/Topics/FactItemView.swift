@@ -109,24 +109,24 @@ struct FactItemView: View {
     private var metadataRow: some View {
         HStack(spacing: 6) {
             Text(fact.createdAt.relativeDisplay)
-                .font(.caption2)
+                .font(.caption)
                 .foregroundStyle(Color.mcTextTertiary)
 
             if fact.pinned {
                 Image(systemName: "pin.fill")
-                    .font(.caption2)
+                    .font(.caption)
                     .foregroundStyle(Color.mcTextLink)
             }
 
             if let imp = fact.importance, imp == .high {
                 Image(systemName: "arrow.up")
-                    .font(.caption2.bold())
+                    .font(.caption.weight(.medium))
                     .foregroundStyle(Color.accentOrange)
             }
 
             if let pct = confidencePercent {
                 Text("\(pct)%")
-                    .font(.caption2)
+                    .font(.caption)
                     .foregroundStyle(pct >= 85
                         ? Color.accentGreen
                         : (pct < 70 ? Color.accentOrange : Color.mcTextTertiary))
@@ -146,11 +146,11 @@ struct FactItemView: View {
 
         HStack {
             Button("Cancel") { isEditing = false }
-                .font(.caption)
+                .font(.footnote)
                 .foregroundStyle(Color.mcTextSecondary)
             Spacer()
             Button("Save") { Task { await save() } }
-                .font(.caption.bold())
+                .font(.footnote.weight(.medium))
                 .foregroundStyle(Color.mcTextPrimary)
         }
     }
@@ -201,7 +201,7 @@ struct FactItemView: View {
                                action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Label(label, systemImage: icon)
-                .font(.caption)
+                .font(.footnote)
                 .foregroundStyle(isDestructive ? Color.accentRed : Color.mcTextPrimary)
                 .padding(.horizontal, 10)
                 .padding(.vertical, 6)

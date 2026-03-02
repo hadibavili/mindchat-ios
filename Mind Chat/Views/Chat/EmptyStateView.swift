@@ -8,6 +8,25 @@ struct EmptyStateView: View {
     @State private var greeting: String = ""
     @State private var showPersonaPicker = false
 
+    private var suggestionsForCurrentMode: [String] {
+        switch vm.chatMemory {
+        case .alwaysPersist, .persistClearable:
+            return [
+                "What do you remember about me?",
+                "Summarize my recent topics",
+                "What are my goals?",
+                "Help me reflect on my week"
+            ]
+        case .fresh, .extractOnly:
+            return [
+                "Help me think through a problem",
+                "Explain something to me simply",
+                "Give me creative ideas",
+                "What should I know about...?"
+            ]
+        }
+    }
+
     private func pickGreeting() -> String {
         let hour = Calendar.current.component(.hour, from: Date())
         let firstName = appState.currentUser?.name?
@@ -63,7 +82,7 @@ struct EmptyStateView: View {
 
             // Greeting
             Text(greeting)
-                .font(.system(size: 26, weight: .bold))
+                .font(.system(size: 28, weight: .semibold))
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 24)
                 .padding(.bottom, 10)
@@ -73,7 +92,7 @@ struct EmptyStateView: View {
 
             // Subtitle
             Text("I remember everything you've shared — just pick up where you left off.")
-                .font(.subheadline)
+                .font(.footnote)
                 .foregroundStyle(Color.mcTextTertiary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 32)
@@ -86,13 +105,13 @@ struct EmptyStateView: View {
             Button { showPersonaPicker = true } label: {
                 HStack(spacing: 5) {
                     Image(systemName: vm.persona.icon)
-                        .font(.system(size: 11, weight: .semibold))
+                        .font(.system(size: 13, weight: .medium))
                         .foregroundStyle(vm.persona.color)
                     Text(vm.persona.label)
-                        .font(.caption.bold())
+                        .font(.footnote.weight(.medium))
                         .foregroundStyle(Color.mcTextPrimary)
                     Image(systemName: "chevron.down")
-                        .font(.system(size: 9, weight: .semibold))
+                        .font(.system(size: 10, weight: .medium))
                         .foregroundStyle(Color.mcTextTertiary)
                 }
                 .padding(.horizontal, 12)
@@ -107,7 +126,17 @@ struct EmptyStateView: View {
             // Memory mode banner
             MemoryModeBanner(mode: vm.chatMemory)
                 .padding(.horizontal, 16)
-                .padding(.bottom, 24)
+                .padding(.bottom, 20)
+
+            // Suggestion cards
+            SuggestionGrid(suggestions: suggestionsForCurrentMode) { suggestion in
+                vm.inputText = suggestion
+            }
+            .padding(.horizontal, 16)
+            .padding(.bottom, 24)
+            .opacity(appeared ? 1 : 0)
+            .offset(y: appeared ? 0 : 8)
+            .animation(.mcGentle.delay(0.1), value: appeared)
 
             Spacer()
 
@@ -145,7 +174,7 @@ struct EmptyStateView: View {
             .animation(.mcGentle, value: appeared)
 
             Text("Ready to talk about \(focus.name)")
-                .font(.system(size: 22, weight: .bold))
+                .font(.system(size: 24, weight: .semibold))
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 32)
                 .opacity(appeared ? 1 : 0)
@@ -153,7 +182,7 @@ struct EmptyStateView: View {
                 .animation(.mcGentle.delay(0.05), value: appeared)
 
             Text(focus.factCount > 0 ? "\(focus.factCount) memories loaded" : "Ask me anything")
-                .font(.subheadline)
+                .font(.footnote)
                 .foregroundStyle(Color.mcTextTertiary)
                 .opacity(appeared ? 1 : 0)
                 .animation(.mcGentle.delay(0.1), value: appeared)
@@ -161,6 +190,36 @@ struct EmptyStateView: View {
             Spacer()
         }
         .onAppear { appeared = true }
+    }
+}
+
+// MARK: - Suggestion Grid
+
+private struct SuggestionGrid: View {
+    let suggestions: [String]
+    let onSelect: (String) -> Void
+
+    private let columns = [
+        GridItem(.flexible(), spacing: 10),
+        GridItem(.flexible(), spacing: 10)
+    ]
+
+    var body: some View {
+        LazyVGrid(columns: columns, spacing: 10) {
+            ForEach(suggestions, id: \.self) { suggestion in
+                Button { onSelect(suggestion) } label: {
+                    Text(suggestion)
+                        .font(.footnote)
+                        .foregroundStyle(Color.mcTextSecondary)
+                        .multilineTextAlignment(.leading)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(12)
+                        .background(Color.mcBgSecondary)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
+                .buttonStyle(.plain)
+            }
+        }
     }
 }
 
@@ -181,17 +240,17 @@ struct UpgradeBannerCard: View {
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Upgrade your plan")
-                        .font(.subheadline.bold())
+                        .font(.subheadline.weight(.medium))
                         .foregroundStyle(.primary)
                     Text("More messages, pro models, and memory")
-                        .font(.caption)
+                        .font(.footnote)
                         .foregroundStyle(.secondary)
                 }
 
                 Spacer()
 
                 Image(systemName: "chevron.right")
-                    .font(.caption.bold())
+                    .font(.footnote.weight(.medium))
                     .foregroundStyle(.secondary)
             }
             .padding(14)
@@ -228,10 +287,10 @@ struct MemoryModeBanner: View {
     var body: some View {
         HStack(spacing: 10) {
             Image(systemName: icon)
-                .font(.caption)
+                .font(.footnote)
                 .foregroundStyle(Color.mcTextLink)
             Text(description)
-                .font(.caption)
+                .font(.footnote)
                 .foregroundStyle(.secondary)
             Spacer()
         }

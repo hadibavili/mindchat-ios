@@ -4,7 +4,7 @@ import UIKit
 struct AccountSection: View {
 
     @ObservedObject var appState: AppState
-    @State private var showDeleteConfirm = false
+    @Binding var showDeleteConfirm: Bool
     @State private var isExporting       = false
     @State private var errorMessage: String?
 
@@ -76,18 +76,10 @@ struct AccountSection: View {
                 }
                 Spacer()
                 Text("Coming soon")
-                    .font(.caption2)
+                    .font(.caption)
                     .foregroundStyle(.tertiary)
             }
             .opacity(0.5)
-        }
-        .sheet(isPresented: $showDeleteConfirm) {
-            ConfirmDeleteAlert { confirmed in
-                if confirmed {
-                    Task { await deleteData() }
-                }
-                showDeleteConfirm = false
-            }
         }
     }
 
@@ -135,15 +127,4 @@ struct AccountSection: View {
         top.present(avc, animated: true)
     }
 
-    // MARK: - Delete
-
-    private func deleteData() async {
-        do {
-            try await AccountService.shared.deleteAllData()
-            appState.selectedConversationId = nil
-            appState.selectedTab = 0
-        } catch {
-            errorMessage = error.localizedDescription
-        }
-    }
 }

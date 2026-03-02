@@ -36,7 +36,7 @@ struct ChatView: View {
 
                         // Top padding before first message
                         if !vm.messages.isEmpty {
-                            Color.clear.frame(height: 20)
+                            Color.clear.frame(height: 16)
                         }
 
                         ForEach(Array(vm.messages.enumerated()), id: \.element.id) { idx, message in
@@ -74,10 +74,10 @@ struct ChatView: View {
                             HStack {
                                 Image(systemName: "exclamationmark.circle")
                                     .foregroundStyle(Color.accentRed)
-                                Text(error).font(.caption).foregroundStyle(Color.accentRed)
+                                Text(error).font(.footnote).foregroundStyle(Color.accentRed)
                                 Spacer()
                                 Button("Retry") { Task { await vm.send() } }
-                                    .font(.caption.bold())
+                                    .font(.footnote.weight(.medium))
                                     .foregroundStyle(Color.mcTextLink)
                             }
                             .padding(.horizontal, 16)
@@ -118,7 +118,7 @@ struct ChatView: View {
             if !vm.messages.isEmpty && vm.chatMemory == .persistClearable {
                 Button { Task { await vm.clearChat() } } label: {
                     Text("Clear conversation")
-                        .font(.caption)
+                        .font(.footnote)
                         .foregroundStyle(.secondary)
                 }
                 .padding(.vertical, 6)
@@ -164,52 +164,27 @@ struct ChatView: View {
                 }
             }
 
-            // Title (center) – only show when inside a conversation
-            if vm.conversationId != nil, let title = vm.conversationTitle {
-                ToolbarItem(placement: .principal) {
-                    Text(title)
-                        .font(.headline)
-                        .lineLimit(1)
+            // Center: model + persona indicator (always visible, like ChatGPT)
+            ToolbarItem(placement: .principal) {
+                Button { showModelSelector = true } label: {
+                    HStack(spacing: 5) {
+                        Circle()
+                            .fill(vm.persona.color)
+                            .frame(width: 7, height: 7)
+                        Text(currentModelLabel)
+                            .font(.headline)
+                            .lineLimit(1)
+                            .foregroundStyle(Color.primary)
+                        Image(systemName: "chevron.down")
+                            .font(.system(size: 10, weight: .semibold))
+                            .foregroundStyle(Color.secondary)
+                    }
                 }
             }
 
-            // Right buttons
-            ToolbarItemGroup(placement: .navigationBarTrailing) {
-                // Persona icon pill (always visible)
-                Button { showPersonaPicker = true } label: {
-                    HStack(spacing: 4) {
-                        Image(systemName: vm.persona.icon)
-                            .font(.system(size: 13, weight: .semibold))
-                            .foregroundStyle(vm.persona.color)
-                        Image(systemName: "chevron.down")
-                            .font(.system(size: 9, weight: .bold))
-                            .foregroundStyle(Color.secondary)
-                    }
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
-                    .background(Color(.secondarySystemFill))
-                    .clipShape(Capsule())
-                }
-
-                // Model selector pill (always visible)
-                Button { showModelSelector = true } label: {
-                    HStack(spacing: 3) {
-                        Text(currentModelLabel)
-                            .font(.caption.bold())
-                            .lineLimit(1)
-                        Image(systemName: "chevron.down")
-                            .font(.system(size: 9, weight: .bold))
-                            .foregroundStyle(Color.secondary)
-                    }
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
-                    .background(Color(.secondarySystemFill))
-                    .clipShape(Capsule())
-                    .foregroundStyle(Color.primary)
-                }
-
+            // Right: new chat (empty) or ellipsis menu (in conversation)
+            ToolbarItem(placement: .navigationBarTrailing) {
                 if vm.conversationId != nil {
-                    // In a conversation → show [⋯] menu
                     Menu {
                         Button { vm.newChat() } label: {
                             Label("New Chat", systemImage: "square.and.pencil")
@@ -236,7 +211,6 @@ struct ChatView: View {
                             .font(.system(size: 18))
                     }
                 } else {
-                    // No active conversation → show New Chat
                     Button { vm.newChat() } label: {
                         Image(systemName: "square.and.pencil")
                             .font(.system(size: 18))
@@ -283,24 +257,23 @@ struct ChatView: View {
 
 struct ThinkingBubble: View {
 
-    let startTime: Date
-    @State private var elapsed: Int = 0
+    @State private var dotPhase = 0
     @State private var timer: Timer?
 
     var body: some View {
-        HStack(spacing: 6) {
-            ProgressView()
-                .scaleEffect(0.7)
-                .tint(.secondary)
-            Text("thinking… \(elapsed)s")
-                .font(.caption)
-                .foregroundStyle(.secondary)
+        HStack(spacing: 5) {
+            ForEach(0..<3, id: \.self) { i in
+                Circle()
+                    .fill(Color.secondary.opacity(0.5))
+                    .frame(width: 7, height: 7)
+                    .scaleEffect(dotPhase == i ? 1.4 : 1.0)
+                    .animation(.easeInOut(duration: 0.28), value: dotPhase)
+            }
             Spacer()
         }
         .onAppear {
-            elapsed = max(0, Int(Date().timeIntervalSince(startTime)))
-            timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { _ in
-                elapsed = max(0, Int(Date().timeIntervalSince(startTime)))
+            timer = Timer.scheduledTimer(withTimeInterval: 0.38, repeats: true) { _ in
+                dotPhase = (dotPhase + 1) % 3
             }
         }
         .onDisappear { timer?.invalidate() }
@@ -315,12 +288,12 @@ struct SearchingIndicator: View {
     var body: some View {
         HStack(spacing: 6) {
             Image(systemName: "globe")
-                .font(.caption)
+                .font(.footnote)
                 .foregroundStyle(.secondary)
                 .rotationEffect(.degrees(animating ? 360 : 0))
                 .animation(.linear(duration: 1.5).repeatForever(autoreverses: false), value: animating)
             Text("Searching the web…")
-                .font(.caption)
+                .font(.footnote)
                 .foregroundStyle(.secondary)
             Spacer()
         }

@@ -126,9 +126,9 @@ struct TopicHeaderView: View {
                     Label("\(sub) subtopics", systemImage: "folder")
                 }
             }
-            .font(.caption).foregroundStyle(Color.mcTextSecondary)
+            .font(.footnote).foregroundStyle(Color.mcTextSecondary)
             if let updated = topic.updatedAt {
-                Text(updated.shortFormatted).font(.caption2).foregroundStyle(Color.mcTextTertiary)
+                Text(updated.shortFormatted).font(.caption).foregroundStyle(Color.mcTextTertiary)
             }
 
             Button {
@@ -157,8 +157,8 @@ struct SmallTopicCard: View {
         HStack {
             TopicIconView(iconName: topic.icon ?? topic.name, size: 28)
             VStack(alignment: .leading) {
-                Text(topic.name).font(.caption.bold()).lineLimit(1)
-                Text("\(topic.factCount) memories").font(.caption2).foregroundStyle(.secondary)
+                Text(topic.name).font(.footnote.weight(.medium)).lineLimit(1)
+                Text("\(topic.factCount) memories").font(.caption).foregroundStyle(.secondary)
             }
             Spacer()
         }
@@ -175,9 +175,9 @@ struct RelatedTopicPill: View {
     var body: some View {
         HStack(spacing: 6) {
             TopicIconView(iconName: topic.icon ?? topic.name, size: 20)
-            Text(topic.name).font(.caption.bold())
+            Text(topic.name).font(.footnote.weight(.medium))
             if let rel = topic.relation {
-                Text("· \(rel)").font(.caption2).foregroundStyle(.secondary)
+                Text("· \(rel)").font(.caption).foregroundStyle(.secondary)
             }
         }
         .padding(.horizontal, 12)

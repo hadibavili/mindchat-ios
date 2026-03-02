@@ -8,17 +8,17 @@ struct TopicFocusChip: View {
     var body: some View {
         HStack(spacing: 6) {
             Image(systemName: "brain.head.profile")
-                .font(.system(size: 12, weight: .semibold))
+                .font(.system(size: 13, weight: .medium))
                 .foregroundStyle(Color.mcTextPrimary)
 
             Text(focus.name)
-                .font(.caption.bold())
+                .font(.footnote.weight(.medium))
                 .foregroundStyle(Color.mcTextPrimary)
                 .lineLimit(1)
 
             if focus.factCount > 0 {
                 Text("\(focus.factCount) memories")
-                    .font(.caption2)
+                    .font(.caption)
                     .foregroundStyle(Color.mcTextTertiary)
             }
 
@@ -26,7 +26,7 @@ struct TopicFocusChip: View {
                 onDismiss()
             } label: {
                 Image(systemName: "xmark")
-                    .font(.system(size: 9, weight: .bold))
+                    .font(.system(size: 10, weight: .medium))
                     .foregroundStyle(Color.mcTextTertiary)
                     .frame(width: 18, height: 18)
                     .background(Color.mcBgActive)

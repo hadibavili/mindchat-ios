@@ -18,7 +18,7 @@ struct AppTypography {
     var subheadline:Font { .system(size: 15 * scale, weight: .regular) }
     var footnote:   Font { .system(size: 13 * scale, weight: .regular) }
     var caption:    Font { .system(size: 12 * scale, weight: .regular) }
-    var caption2:   Font { .system(size: 11 * scale, weight: .regular) }
+    var caption2:   Font { .system(size: 12 * scale, weight: .regular) }
 
     // MARK: Mono
     var mono:       Font { .system(size: 14 * scale, weight: .regular, design: .monospaced) }

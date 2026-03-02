@@ -9,6 +9,8 @@ struct MessageBubble: View {
     @State private var showImageViewer = false
     @State private var selectedImageURL: String?
     @State private var showCopied = false
+    @State private var thumbsUp = false
+    @State private var thumbsDown = false
 
     var isUser: Bool { message.role == .user }
 
@@ -47,7 +49,8 @@ struct MessageBubble: View {
             }
         }
         .padding(.horizontal, 16)
-        .padding(.vertical, 6)
+        .padding(.top, isUser ? 4 : 10)
+        .padding(.bottom, isUser ? 4 : 4)
         .background(isHighlighted ? themeManager.accentColor.opacity(0.07) : Color.clear)
         .animation(.easeInOut(duration: 0.4), value: isHighlighted)
         // Skip contextMenu on question-form messages — it blocks TextField interaction
@@ -63,7 +66,7 @@ struct MessageBubble: View {
 
     private var userBubble: some View {
         HStack {
-            Spacer(minLength: 60)
+            Spacer(minLength: 0)
             VStack(alignment: .trailing, spacing: 6) {
                 if let attachments = message.attachments, !attachments.isEmpty {
                     AttachmentGrid(attachments: attachments, onImageTap: { url in
@@ -81,6 +84,7 @@ struct MessageBubble: View {
                         .clipShape(RoundedRectangle(cornerRadius: 18))
                 }
             }
+            .frame(maxWidth: UIScreen.main.bounds.width * 0.78)
         }
     }
 
@@ -137,7 +141,7 @@ struct MessageBubble: View {
                         .scaleEffect(0.7)
                         .tint(.secondary)
                     Text("Preparing questions…")
-                        .font(.caption)
+                        .font(.footnote)
                         .foregroundStyle(.secondary)
                 }
                 .padding(.top, 4)
@@ -146,7 +150,7 @@ struct MessageBubble: View {
 
                 if message.isStreaming && !message.content.isEmpty {
                     Text("●")
-                        .font(.caption)
+                        .font(.footnote)
                         .foregroundStyle(Color.mcBorderDefault)
                         .animation(.easeInOut(duration: 0.6).repeatForever(autoreverses: true), value: message.isStreaming)
                 }
@@ -173,15 +177,44 @@ struct MessageBubble: View {
     // MARK: - Assistant Action Bar
 
     private var assistantActionBar: some View {
-        HStack(spacing: 16) {
+        HStack(spacing: 14) {
+            // Thumbs up
+            Button {
+                thumbsUp.toggle()
+                if thumbsUp { thumbsDown = false }
+            } label: {
+                Image(systemName: thumbsUp ? "hand.thumbsup.fill" : "hand.thumbsup")
+                    .font(.system(size: 14))
+                    .foregroundStyle(thumbsUp ? Color.accentGreen : Color.mcTextTertiary)
+                    .contentTransition(.symbolEffect(.replace))
+            }
+            .buttonStyle(.plain)
+
+            // Thumbs down
+            Button {
+                thumbsDown.toggle()
+                if thumbsDown { thumbsUp = false }
+            } label: {
+                Image(systemName: thumbsDown ? "hand.thumbsdown.fill" : "hand.thumbsdown")
+                    .font(.system(size: 14))
+                    .foregroundStyle(thumbsDown ? Color.accentRed : Color.mcTextTertiary)
+                    .contentTransition(.symbolEffect(.replace))
+            }
+            .buttonStyle(.plain)
+
+            Rectangle()
+                .fill(Color.mcBorderDefault)
+                .frame(width: 0.5, height: 14)
+
+            // Copy
             Button {
                 vm.copyMessage(message)
                 showCopied = true
                 DispatchQueue.main.asyncAfter(deadline: .now() + 2) { showCopied = false }
             } label: {
                 Image(systemName: showCopied ? "checkmark" : "doc.on.doc")
-                    .font(.system(size: 13))
-                    .foregroundStyle(Color.mcTextTertiary)
+                    .font(.system(size: 14))
+                    .foregroundStyle(showCopied ? Color.accentGreen : Color.mcTextTertiary)
                     .contentTransition(.symbolEffect(.replace))
             }
             .buttonStyle(.plain)
@@ -189,13 +222,13 @@ struct MessageBubble: View {
             if message == vm.messages.last(where: { $0.role == .assistant }) {
                 Button { Task { await vm.regenerateLast() } } label: {
                     Image(systemName: "arrow.clockwise")
-                        .font(.system(size: 13))
+                        .font(.system(size: 14))
                         .foregroundStyle(Color.mcTextTertiary)
                 }
                 .buttonStyle(.plain)
             }
         }
-        .padding(.top, 2)
+        .padding(.top, 4)
     }
 
     // MARK: - Context Menu
@@ -242,10 +275,10 @@ struct SearchSourcesRow: View {
                     Link(destination: URL(string: source.url) ?? URL(string: "https://example.com")!) {
                         HStack(spacing: 6) {
                             Image(systemName: "globe")
-                                .font(.caption2)
+                                .font(.caption)
                                 .foregroundStyle(.secondary)
                             Text(source.title)
-                                .font(.caption)
+                                .font(.footnote)
                                 .foregroundStyle(.secondary)
                                 .lineLimit(1)
                         }
@@ -351,7 +384,7 @@ struct AttachmentGrid: View {
                 HStack(spacing: 8) {
                     FileIconView(mimeType: att.mimeType, name: att.name, size: 26)
                     Text(att.name)
-                        .font(.caption)
+                        .font(.footnote)
                         .lineLimit(1)
                 }
                 .padding(8)

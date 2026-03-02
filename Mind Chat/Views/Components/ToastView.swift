@@ -71,11 +71,11 @@ struct ToastRow: View {
             Spacer()
             if let action = toast.action, let label = toast.actionLabel {
                 Button(label) { action() }
-                    .font(.caption.bold())
+                    .font(.footnote.weight(.medium))
                     .foregroundStyle(color)
             }
             Button { onDismiss() } label: {
-                Image(systemName: "xmark").font(.caption).foregroundStyle(.secondary)
+                Image(systemName: "xmark").font(.footnote).foregroundStyle(.secondary)
             }
         }
         .padding()

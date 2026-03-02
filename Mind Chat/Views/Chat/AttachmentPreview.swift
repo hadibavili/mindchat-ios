@@ -18,7 +18,7 @@ struct AttachmentPreview: View {
                             VStack(spacing: 4) {
                                 FileIconView(mimeType: att.mimeType, name: att.name, size: 32)
                                 Text(att.name)
-                                    .font(.caption2)
+                                    .font(.caption)
                                     .lineLimit(2)
                                     .multilineTextAlignment(.center)
                             }

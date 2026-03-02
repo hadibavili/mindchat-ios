@@ -37,7 +37,7 @@ struct TopicPickerSheet: View {
 
                             if node.path.contains("/") {
                                 Text(node.path)
-                                    .font(.caption2)
+                                    .font(.caption)
                                     .foregroundStyle(Color.mcTextTertiary)
                                     .lineLimit(1)
                             }

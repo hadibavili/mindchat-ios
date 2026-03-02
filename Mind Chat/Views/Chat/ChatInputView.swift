@@ -161,11 +161,9 @@ struct ChatInputView: View {
                             }
                         } label: {
                             Image(systemName: "plus")
-                                .font(.system(size: 15, weight: .semibold))
+                                .font(.system(size: 18, weight: .medium))
                                 .foregroundStyle(Color.mcTextSecondary)
                                 .frame(width: 36, height: 36)
-                                .background(Color.mcBgHover)
-                                .clipShape(Circle())
                                 .contentShape(Circle())
                         }
 
@@ -174,7 +172,7 @@ struct ChatInputView: View {
                         // Character counter
                         if showCounter {
                             Text("\(charCount)/\(kCharLimit)")
-                                .font(.caption2.monospacedDigit())
+                                .font(.caption.monospacedDigit())
                                 .foregroundStyle(isOverLimit ? Color.accentRed : Color.mcTextTertiary)
                                 .animation(.none, value: charCount)
                                 .padding(.trailing, 10)
@@ -190,19 +188,12 @@ struct ChatInputView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 22))
                 .overlay(
                     RoundedRectangle(cornerRadius: 22)
-                        .stroke(Color.mcBorderDefault, lineWidth: 1)
+                        .stroke(Color.mcBorderDefault, lineWidth: 0.5)
                 )
                 .padding(.horizontal, 16)
                 .padding(.top, 10)
-                .padding(.bottom, 4)
+                .padding(.bottom, 10)
             }
-
-            // Disclaimer
-            Text("MindChat can make mistakes.")
-                .font(.caption2)
-                .foregroundStyle(Color.mcTextTertiary)
-                .frame(maxWidth: .infinity, alignment: .center)
-                .padding(.bottom, 8)
         }
         .background(Color.mcBgPrimary)
         .animation(.mcSmooth, value: isRecording)
@@ -530,7 +521,7 @@ private struct ModelRecommendationBanner: View {
 
             // Label
             Text("Try **\(recommendation.modelLabel)** for \(recommendation.intent.description)")
-                .font(.caption)
+                .font(.footnote)
                 .foregroundStyle(Color.mcTextSecondary)
                 .lineLimit(1)
 
@@ -539,7 +530,7 @@ private struct ModelRecommendationBanner: View {
             // "Use" button
             Button(action: onUse) {
                 Text("Use")
-                    .font(.caption.bold())
+                    .font(.footnote.weight(.medium))
                     .foregroundStyle(.white)
                     .padding(.horizontal, 10)
                     .padding(.vertical, 4)

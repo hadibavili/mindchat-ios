@@ -94,15 +94,15 @@ struct UsageMeterView: View {
 
             VStack(spacing: 2) {
                 Text(label)
-                    .font(.caption2.bold())
+                    .font(.caption.weight(.medium))
                     .multilineTextAlignment(.center)
                 if isUnlimited {
                     Text("Unlimited")
-                        .font(.caption2)
+                        .font(.caption)
                         .foregroundStyle(Color.accentGreen)
                 } else {
                     Text("\(used) of \(limit)")
-                        .font(.caption2)
+                        .font(.caption)
                         .foregroundStyle(isHigh ? Color.accentOrange : .secondary)
                         .monospacedDigit()
                 }

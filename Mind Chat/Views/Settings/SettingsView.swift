@@ -5,6 +5,9 @@ struct SettingsView: View {
     @EnvironmentObject private var themeManager: ThemeManager
     @EnvironmentObject private var appState: AppState
     @StateObject private var vm = SettingsViewModel()
+    @State private var showDeleteConfirm = false
+    @State private var deleteConfirmed   = false
+    @State private var deleteError: String?
 
     var body: some View {
         NavigationStack {
@@ -26,7 +29,7 @@ struct SettingsView: View {
                     }
                 }
 
-                AccountSection(appState: appState)
+                AccountSection(appState: appState, showDeleteConfirm: $showDeleteConfirm)
             }
             .navigationTitle("Settings")
             .toolbar {
@@ -59,6 +62,25 @@ struct SettingsView: View {
             .onChange(of: vm.language)             { _, _ in vm.checkDirty() }
             .onChange(of: vm.autoExtract)          { _, _ in vm.checkDirty() }
             .onChange(of: vm.showMemoryIndicators) { _, _ in vm.checkDirty() }
+            .sheet(isPresented: $showDeleteConfirm, onDismiss: {
+                if deleteConfirmed {
+                    deleteConfirmed = false
+                    Task {
+                        do {
+                            try await AccountService.shared.deleteAllData()
+                            appState.selectedConversationId = nil
+                            appState.selectedTab = 0
+                        } catch {
+                            deleteError = error.localizedDescription
+                        }
+                    }
+                }
+            }) {
+                ConfirmDeleteAlert { confirmed in
+                    deleteConfirmed = confirmed
+                    showDeleteConfirm = false
+                }
+            }
         }
     }
 }

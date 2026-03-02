@@ -347,7 +347,7 @@ private struct PlanHeroHeader: View {
 
             VStack(alignment: .leading, spacing: 10) {
                 Text("YOUR CURRENT PLAN")
-                    .font(.caption2.bold())
+                    .font(.caption.weight(.medium))
                     .tracking(1.5)
                     .foregroundStyle(Color.white.opacity(0.7))
 
@@ -375,7 +375,7 @@ private struct PlanHeroHeader: View {
                                     ProgressView().scaleEffect(0.65).tint(.white)
                                 } else {
                                     Image(systemName: "creditcard.fill")
-                                        .font(.caption2)
+                                        .font(.caption)
                                     Text("Manage billing")
                                         .font(.caption.bold())
                                 }
@@ -433,7 +433,7 @@ struct TrialBanner: View {
                         .monospacedDigit()
                         .contentTransition(.numericText())
                     Text("days")
-                        .font(.caption2)
+                        .font(.caption)
                         .foregroundStyle(.secondary)
                 }
             }

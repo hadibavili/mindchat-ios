@@ -328,7 +328,7 @@ struct CodeBlockView: View {
             // Header bar
             HStack {
                 Text(language?.lowercased() ?? "code")
-                    .font(.caption2.bold())
+                    .font(.caption.weight(.medium))
                     .foregroundStyle(.secondary)
                 Spacer()
                 Button {
@@ -339,9 +339,9 @@ struct CodeBlockView: View {
                 } label: {
                     HStack(spacing: 4) {
                         Image(systemName: copied ? "checkmark" : "doc.on.doc")
-                            .font(.caption2)
+                            .font(.caption)
                         Text(copied ? "Copied" : "Copy")
-                            .font(.caption2)
+                            .font(.caption)
                     }
                     .foregroundStyle(.secondary)
                 }

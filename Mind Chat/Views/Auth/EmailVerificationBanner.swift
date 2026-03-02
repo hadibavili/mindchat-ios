@@ -23,15 +23,15 @@ struct EmailVerificationBanner: View {
                     ProgressView().scaleEffect(0.7)
                 } else if cooldown > 0 {
                     Text("\(cooldown)s")
-                        .font(.caption.bold())
+                        .font(.footnote.weight(.medium))
                         .foregroundStyle(.secondary)
                 } else if sendError {
                     Text("Failed – retry")
-                        .font(.caption.bold())
+                        .font(.footnote.weight(.medium))
                         .foregroundStyle(Color.accentRed)
                 } else {
                     Text("Resend")
-                        .font(.caption.bold())
+                        .font(.footnote.weight(.medium))
                         .foregroundStyle(Color.mcTextPrimary)
                 }
             }

@@ -14,6 +14,36 @@ struct ModelSelectorSheet: View {
     var body: some View {
         NavigationStack {
             List {
+                // Chat Mode (persona) section
+                Section("Chat Mode") {
+                    ForEach(PersonaType.allCases, id: \.self) { mode in
+                        Button {
+                            Task { await vm.updatePersona(mode) }
+                        } label: {
+                            HStack(spacing: 12) {
+                                Image(systemName: mode.icon)
+                                    .font(.system(size: 15, weight: .semibold))
+                                    .foregroundStyle(mode.color)
+                                    .frame(width: 24)
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(mode.label)
+                                        .foregroundStyle(Color.primary)
+                                    Text(mode.description)
+                                        .font(.footnote)
+                                        .foregroundStyle(.secondary)
+                                }
+                                Spacer()
+                                if vm.persona == mode {
+                                    Image(systemName: "checkmark")
+                                        .foregroundStyle(Color.mcTextLink)
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Model section
+                Section("Model") {
                 ForEach(sortedModels) { option in
                     let isLocked = option.comingSoon || !(PLAN_MODEL_ACCESS[plan]?.contains(option.id) ?? false)
                     Button {
@@ -39,7 +69,7 @@ struct ModelSelectorSheet: View {
                                 Text(option.label)
                                     .foregroundStyle(isLocked ? .secondary : .primary)
                                 Text(PROVIDER_LABELS[option.provider] ?? "")
-                                    .font(.caption)
+                                    .font(.footnote)
                                     .foregroundStyle(.secondary)
                             }
                             Spacer()
@@ -61,16 +91,17 @@ struct ModelSelectorSheet: View {
                     }
                     .disabled(isLocked)
                 }
+                } // end Section("Model")
 
                 // Footer
                 Section {
                     Text("Your memory carries over — switch models anytime without losing context.")
-                        .font(.caption)
+                        .font(.footnote)
                         .foregroundStyle(Color.mcTextTertiary)
                         .listRowBackground(Color.clear)
                 }
             }
-            .navigationTitle("Select Model")
+            .navigationTitle("Mode & Model")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -100,7 +131,7 @@ struct TierBadge: View {
     var body: some View {
         if tier != .free {
             Text(tier.rawValue.capitalized)
-                .font(.caption2.bold())
+                .font(.caption.weight(.medium))
                 .padding(.horizontal, 6)
                 .padding(.vertical, 2)
                 .background(tierColor.opacity(0.15))
@@ -121,7 +152,7 @@ struct TierBadge: View {
 struct SoonBadge: View {
     var body: some View {
         Text("Soon")
-            .font(.caption2.bold())
+            .font(.caption.weight(.medium))
             .padding(.horizontal, 6)
             .padding(.vertical, 2)
             .background(Color.mcTextTertiary.opacity(0.15))

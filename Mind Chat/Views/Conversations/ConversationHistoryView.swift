@@ -146,7 +146,7 @@ struct ConversationHistoryView: View {
                     .foregroundStyle(Color.mcTextPrimary)
                     .lineLimit(1)
                 Text(conv.updatedAt.relativeDisplay)
-                    .font(.caption2)
+                    .font(.caption)
                     .foregroundStyle(Color.mcTextTertiary)
             }
             .padding(.vertical, 2)

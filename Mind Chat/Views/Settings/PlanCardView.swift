@@ -127,7 +127,7 @@ struct PlanCardView: View {
                         Text(plan.label).font(.headline.bold())
                         if plan == .pro && currentPlan == .free {
                             Text("Popular")
-                                .font(.caption2.bold())
+                                .font(.caption.weight(.medium))
                                 .padding(.horizontal, 7).padding(.vertical, 2)
                                 .background(Color.mcTextLink.opacity(0.1))
                                 .foregroundStyle(Color.mcTextLink)
@@ -137,7 +137,7 @@ struct PlanCardView: View {
                         }
                         if plan == .premium {
                             Text("Best value")
-                                .font(.caption2.bold())
+                                .font(.caption.weight(.medium))
                                 .padding(.horizontal, 7).padding(.vertical, 2)
                                 .background(Color.accentPurple.opacity(0.1))
                                 .foregroundStyle(Color.accentPurple)

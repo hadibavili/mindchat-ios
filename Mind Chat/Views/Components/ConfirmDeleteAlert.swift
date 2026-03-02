@@ -5,7 +5,7 @@ struct ConfirmDeleteAlert: View {
     let onConfirm: (Bool) -> Void
     @State private var confirmText = ""
 
-    private let requiredPhrase = "delete my data"
+    private let requiredPhrase = "delete"
 
     var body: some View {
         NavigationStack {
@@ -40,7 +40,7 @@ struct ConfirmDeleteAlert: View {
                 }
                 .buttonStyle(.borderedProminent)
                 .tint(.red)
-                .disabled(confirmText != requiredPhrase)
+                .disabled(confirmText.lowercased() != requiredPhrase)
 
                 Button("Cancel") {
                     onConfirm(false)

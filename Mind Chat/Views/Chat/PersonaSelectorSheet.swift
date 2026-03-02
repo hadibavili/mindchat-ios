@@ -23,7 +23,7 @@ struct PersonaSelectorSheet: View {
                                 Text(mode.label)
                                     .foregroundStyle(Color.primary)
                                 Text(mode.description)
-                                    .font(.caption)
+                                    .font(.footnote)
                                     .foregroundStyle(.secondary)
                             }
 

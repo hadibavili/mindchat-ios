@@ -11,7 +11,7 @@ struct TopicCardView: View {
                 Spacer()
                 if topic.totalFactCount > 0 {
                     Text("\(topic.totalFactCount)")
-                        .font(.caption.bold())
+                        .font(.footnote.weight(.medium))
                         .padding(.horizontal, 8)
                         .padding(.vertical, 3)
                         .background(Color.accentGreen.opacity(0.1))
@@ -27,7 +27,7 @@ struct TopicCardView: View {
 
             if let summary = topic.summary {
                 Text(summary)
-                    .font(.caption)
+                    .font(.footnote)
                     .foregroundStyle(Color.mcTextSecondary)
                     .lineLimit(2)
             }
@@ -36,12 +36,12 @@ struct TopicCardView: View {
 
             HStack {
                 Text(topic.updatedAt?.relativeDisplay ?? "")
-                    .font(.caption2)
+                    .font(.caption)
                     .foregroundStyle(Color.mcTextTertiary)
                 if !topic.children.isEmpty {
                     Spacer()
                     Text("\(topic.children.count) subtopics")
-                        .font(.caption2)
+                        .font(.caption)
                         .foregroundStyle(Color.mcTextTertiary)
                 }
             }

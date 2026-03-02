@@ -83,7 +83,7 @@ struct QuestionFormView: View {
             : (focusedField == questionId ? .mcTextPrimary : .mcTextTertiary)
 
         return Text("\(number)")
-            .font(.caption2.weight(.bold))
+            .font(.caption.weight(.bold))
             .foregroundStyle(.white)
             .frame(width: 20, height: 20)
             .background(color)
@@ -132,7 +132,7 @@ struct QuestionFormView: View {
                     .foregroundStyle(Color.mcTextTertiary)
             } else {
                 Image(systemName: "quote.opening")
-                    .font(.caption2)
+                    .font(.caption)
                     .foregroundStyle(Color.mcTextTertiary)
                     .padding(.top, 4)
                 Text(answer)
