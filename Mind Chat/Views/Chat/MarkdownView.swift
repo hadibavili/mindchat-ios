@@ -7,6 +7,7 @@ import SwiftUI
 struct MarkdownView: View {
 
     let text: String
+    var onImageTap: ((String) -> Void)? = nil
 
     var body: some View {
         let blocks = MarkdownParser.parse(text)
@@ -21,6 +22,29 @@ struct MarkdownView: View {
     @ViewBuilder
     private func blockView(for block: MarkdownBlock) -> some View {
         switch block {
+        case .image(let alt, let url):
+            AsyncImage(url: URL(string: url)) { phase in
+                switch phase {
+                case .success(let img):
+                    img.resizable()
+                        .scaledToFit()
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                        .onTapGesture { onImageTap?(url) }
+                case .failure:
+                    Label(alt.isEmpty ? "Image" : alt, systemImage: "photo")
+                        .foregroundStyle(.secondary)
+                        .padding(.vertical, 8)
+                default:
+                    SkeletonView()
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 200)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .frame(maxHeight: 300)
+            .padding(.bottom, 10)
+
         case .paragraph(let text):
             inlineText(text)
                 .padding(.bottom, 10)
@@ -135,6 +159,7 @@ enum MarkdownBlock {
     case orderedList([String])
     case blockquote(String)
     case horizontalRule
+    case image(alt: String, url: String)
     case empty
 }
 
@@ -248,6 +273,13 @@ enum MarkdownParser {
                 continue
             }
 
+            // Inline image — standalone line `![alt](url)`
+            if let (alt, url) = parseImageLine(trimmed) {
+                blocks.append(.image(alt: alt, url: url))
+                i += 1
+                continue
+            }
+
             // Paragraph — collect contiguous non-empty, non-special lines
             var paraLines: [String] = []
             while i < lines.count {
@@ -313,6 +345,22 @@ enum MarkdownParser {
         return (stripped.allSatisfy({ $0 == "-" }) && stripped.count >= 3) ||
                (stripped.allSatisfy({ $0 == "*" }) && stripped.count >= 3) ||
                (stripped.allSatisfy({ $0 == "_" }) && stripped.count >= 3)
+    }
+
+    /// Parses a standalone image line `![alt](url)` → returns (alt, url) or nil.
+    private static func parseImageLine(_ line: String) -> (String, String)? {
+        guard line.hasPrefix("!["),
+              let bracketClose = line.firstIndex(of: "]"),
+              line.index(after: bracketClose) < line.endIndex,
+              line[line.index(after: bracketClose)] == "(" else { return nil }
+        let altStart = line.index(line.startIndex, offsetBy: 2)
+        let alt = String(line[altStart..<bracketClose])
+        let urlStart = line.index(bracketClose, offsetBy: 2)
+        guard urlStart < line.endIndex,
+              let urlEnd = line.lastIndex(of: ")") else { return nil }
+        let url = String(line[urlStart..<urlEnd])
+        guard !url.isEmpty else { return nil }
+        return (alt, url)
     }
 }
 

@@ -20,8 +20,8 @@ struct SSEParser {
                     var lineCount = 0
                     for try await line in bytes.lines {
                         lineCount += 1
-                        // Log every raw line (trim to 120 chars to avoid log spam on long tokens)
-                        let preview = line.count > 120 ? String(line.prefix(120)) + "…" : line
+                        // Log every raw line (trim to 500 chars to capture long image URLs)
+                        let preview = line.count > 500 ? String(line.prefix(500)) + "…" : line
                         print("[SSEParser] line \(lineCount): \(preview)")
 
                         guard line.hasPrefix("data:") else { continue }
@@ -103,6 +103,17 @@ struct SSEParser {
             }
             return .topicsExtracted(topics)
 
+        case "generating_image":
+            return .generatingImage
+
+        case "image_generated":
+            guard let url = json["url"] as? String, !url.isEmpty else { return nil }
+            let name = json["name"] as? String ?? json["description"] as? String
+            return .imageGenerated(url: url, name: name)
+
+        case "stream_end":
+            return .streamEnd
+
         case "done":
             return .done
 
@@ -111,6 +122,7 @@ struct SSEParser {
             return .error(msg)
 
         default:
+            print("[SSEParser] UNKNOWN event type: '\(type)' | full payload: \(raw)")
             return nil
         }
     }

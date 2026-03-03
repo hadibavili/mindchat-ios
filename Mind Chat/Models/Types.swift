@@ -464,6 +464,21 @@ struct MessageAttachment: Codable, Identifiable, Sendable {
     }
 }
 
+/// Passed to ImageViewerSheet via fullScreenCover(item:). Carries a URL and an
+/// optional pre-loaded UIImage so the viewer never needs to re-download what's
+/// already cached.
+struct SelectedImageItem: Identifiable, Sendable {
+    let id: String
+    let url: String
+    let preloadedImage: UIImage?
+
+    init(url: String, preloadedImage: UIImage? = nil) {
+        self.id = url   // stable identity — same URL = same item
+        self.url = url
+        self.preloadedImage = preloadedImage
+    }
+}
+
 struct PendingAttachment: Identifiable, Sendable {
     let id: String = UUID().uuidString
     let localURL: URL
@@ -697,6 +712,9 @@ enum SSEEvent: Sendable {
     case searchComplete(query: String, sources: [SearchSource])
     case extracting
     case topicsExtracted([ExtractedTopic])
+    case generatingImage
+    case imageGenerated(url: String, name: String?)
+    case streamEnd
     case error(String)
     case done
 }

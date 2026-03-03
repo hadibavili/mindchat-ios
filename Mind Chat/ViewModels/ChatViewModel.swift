@@ -20,8 +20,9 @@ final class ChatViewModel: ObservableObject {
     @Published var inputText   = ""
     @Published var isStreaming = false
     @Published var isLoading   = false
-    @Published var isSearching  = false
-    @Published var isExtracting = false
+    @Published var isSearching      = false
+    @Published var isExtracting     = false
+    @Published var isGeneratingImage = false
     @Published var errorMessage: String?
     @Published var conversationId: String?
     @Published var conversationTitle: String?
@@ -326,6 +327,9 @@ final class ChatViewModel: ObservableObject {
         case .token(let token):
             thinkingStart = nil
             isSearching = false
+            if token.contains("![") || (token.contains("http") && (token.contains(".png") || token.contains(".jpg") || token.contains(".webp") || token.contains(".gif"))) {
+                print("[ChatViewModel] token may contain image URL: \(token)")
+            }
             appendToken(token, to: assistantId)
         case .searching:
             isSearching = true
@@ -344,6 +348,32 @@ final class ChatViewModel: ObservableObject {
                 updateTopics(topics, for: assistantId)
             }
             eventBus.publish(.topicsUpdated)
+        case .generatingImage:
+            print("[ChatViewModel] generating_image event — image is being created")
+            isGeneratingImage = true
+
+        case .imageGenerated(let url, let name):
+            print("[ChatViewModel] imageGenerated event | url='\(url)' | name='\(name ?? "nil")'")
+            isGeneratingImage = false
+            let att = MessageAttachment(
+                id: UUID().uuidString,
+                url: url,
+                name: name ?? "Generated Image",
+                type: .image,
+                mimeType: "image/png"
+            )
+            guard let idx = messages.firstIndex(where: { $0.id == assistantId }) else { return }
+            if messages[idx].attachments == nil {
+                messages[idx].attachments = [att]
+            } else {
+                messages[idx].attachments?.append(att)
+            }
+            let attId = att.id
+            downloadAndCacheImage(url: url, forId: attId)
+
+        case .streamEnd:
+            print("[ChatViewModel] stream_end event — text stream finished")
+            isStreaming = false
         case .error(let msg):
             finishStream(assistantId: assistantId, error: msg)
         case .done:
@@ -366,11 +396,49 @@ final class ChatViewModel: ObservableObject {
         messages[idx].sources = sources
     }
 
+    /// Rewrite raw private Vercel Blob URLs to go through the /api/blob proxy.
+    private func proxyBlobURL(_ url: String) -> String {
+        guard let u = URL(string: url),
+              let host = u.host,
+              host.hasSuffix(".blob.vercel-storage.com") else { return url }
+        let encoded = url.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? url
+        return "https://app.mindchat.fenqor.nl/api/blob?url=\(encoded)"
+    }
+
+    func downloadAndCacheImage(url: String, forId id: String) {
+        let resolvedURL = proxyBlobURL(url)
+        Task {
+            guard let imageURL = URL(string: resolvedURL) else {
+                print("[ChatViewModel] invalid generated image URL: \(resolvedURL)")
+                return
+            }
+            var request = URLRequest(url: imageURL)
+            if let token = KeychainManager.shared.accessToken {
+                request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+            }
+            do {
+                let (data, response) = try await URLSession.shared.data(for: request)
+                if let http = response as? HTTPURLResponse {
+                    print("[ChatViewModel] image download status: \(http.statusCode) (\(data.count) bytes)")
+                }
+                guard let image = UIImage(data: data) else {
+                    print("[ChatViewModel] could not decode image data (\(data.count) bytes)")
+                    return
+                }
+                print("[ChatViewModel] image decoded successfully, caching for id=\(id)")
+                await MainActor.run { cacheImage(image, forId: id) }
+            } catch {
+                print("[ChatViewModel] image download failed: \(error)")
+            }
+        }
+    }
+
     private func finishStream(assistantId: String, error: String?) {
-        isStreaming   = false
-        isSearching   = false
-        isExtracting  = false
-        thinkingStart = nil
+        isStreaming        = false
+        isSearching        = false
+        isExtracting       = false
+        isGeneratingImage  = false
+        thinkingStart      = nil
         streamTask    = nil
 
         guard let idx = messages.firstIndex(where: { $0.id == assistantId }) else { return }

@@ -6,8 +6,8 @@ struct MessageBubble: View {
     var isHighlighted: Bool = false
     @ObservedObject var vm: ChatViewModel
     @EnvironmentObject private var themeManager: ThemeManager
-    @State private var showImageViewer = false
-    @State private var selectedImageURL: String?
+    // Single Identifiable item — eliminates the isPresented/selectedURL race condition.
+    @State private var selectedImageItem: SelectedImageItem?
     @State private var showCopied = false
     @State private var thumbsUp = false
     @State private var thumbsDown = false
@@ -26,7 +26,6 @@ struct MessageBubble: View {
 
     /// Parsed single choice question (only when JSON is complete).
     private var activeChoiceQuestion: (preamble: String?, choice: ChoiceQuestion)? {
-        // Don't parse if it's a multi-question form
         guard activeQuestionForm == nil else { return nil }
         return ChoiceQuestion.parse(from: message.content)
     }
@@ -52,25 +51,23 @@ struct MessageBubble: View {
         .padding(.vertical, 6)
         .background(isHighlighted ? themeManager.accentColor.opacity(0.07) : Color.clear)
         .animation(.easeInOut(duration: 0.4), value: isHighlighted)
-        // Skip contextMenu on question-form messages — it blocks TextField interaction
         .modifier(ConditionalContextMenu(show: !isQuestionFormMessage) { contextMenuContent })
-        .fullScreenCover(isPresented: $showImageViewer) {
-            if let url = selectedImageURL {
-                ImageViewerSheet(imageURL: url)
-            }
+        // item: binding is atomic — no race condition between URL and isPresented
+        .fullScreenCover(item: $selectedImageItem) { item in
+            ImageViewerSheet(item: item)
         }
     }
 
-    // MARK: - User Bubble (subtle gray background, right-aligned)
+    // MARK: - User Bubble
 
     private var userBubble: some View {
         HStack {
             Spacer(minLength: 60)
             VStack(alignment: .trailing, spacing: 6) {
                 if let attachments = message.attachments, !attachments.isEmpty {
-                    AttachmentGrid(attachments: attachments, onImageTap: { url in
-                        selectedImageURL = url
-                        showImageViewer = true
+                    AttachmentGrid(attachments: attachments, onImageTap: { att in
+                        selectedImageItem = SelectedImageItem(url: att.url,
+                                                             preloadedImage: vm.decodedImages[att.id])
                     }, vm: vm)
                 }
                 if !message.content.isEmpty {
@@ -86,14 +83,14 @@ struct MessageBubble: View {
         }
     }
 
-    // MARK: - Assistant Bubble (clean full-width text, left-aligned, no avatar)
+    // MARK: - Assistant Bubble
 
     private var assistantBubble: some View {
         VStack(alignment: .leading, spacing: 6) {
             if let attachments = message.attachments, !attachments.isEmpty {
-                AttachmentGrid(attachments: attachments, onImageTap: { url in
-                    selectedImageURL = url
-                    showImageViewer = true
+                AttachmentGrid(attachments: attachments, onImageTap: { att in
+                    selectedImageItem = SelectedImageItem(url: att.url,
+                                                         preloadedImage: vm.decodedImages[att.id])
                 }, vm: vm)
             }
 
@@ -108,20 +105,16 @@ struct MessageBubble: View {
             } else if message.content.isEmpty && message.isStreaming {
                 EmptyView()
             } else if let result = activeQuestionForm {
-                // JSON is fully parseable → show the interactive multi-field form
                 if let preamble = result.preamble {
                     MarkdownView(text: preamble)
                 }
                 QuestionFormView(form: result.form, messageId: message.id, vm: vm)
             } else if let (preamble, choice) = activeChoiceQuestion {
-                // Single choice question → show option chips
                 if let preamble {
                     MarkdownView(text: preamble)
                 }
                 ChoiceFormView(choice: choice, messageId: message.id, vm: vm)
             } else if isStreamingQuestionJSON {
-                // JSON is still streaming in — show preamble (if any) + a loading indicator
-                // instead of flashing raw JSON as a code snippet
                 if let preambleEnd = message.content.range(of: "{\"questions\"") ??
                                      message.content.range(of: "{ \"questions\"") ??
                                      message.content.range(of: "{\"question\"") ??
@@ -144,7 +137,9 @@ struct MessageBubble: View {
                 }
                 .padding(.top, 4)
             } else {
-                MarkdownView(text: message.content)
+                MarkdownView(text: message.content, onImageTap: { url in
+                    selectedImageItem = SelectedImageItem(url: url, preloadedImage: nil)
+                })
 
                 if message.isStreaming && !message.content.isEmpty {
                     Text("●")
@@ -162,10 +157,8 @@ struct MessageBubble: View {
                 SearchSourcesRow(sources: sources)
             }
 
-            // Action bar (copy/regenerate) for completed assistant messages
             if !message.isStreaming && !message.isError && !message.content.isEmpty,
                QuestionForm.parse(from: message.content) == nil || vm.submittedForms.contains(message.id) {
-
                 assistantActionBar
             }
         }
@@ -176,7 +169,6 @@ struct MessageBubble: View {
 
     private var assistantActionBar: some View {
         HStack(spacing: 14) {
-            // Thumbs up
             Button {
                 thumbsUp.toggle()
                 if thumbsUp { thumbsDown = false }
@@ -188,7 +180,6 @@ struct MessageBubble: View {
             }
             .buttonStyle(.plain)
 
-            // Thumbs down
             Button {
                 thumbsDown.toggle()
                 if thumbsDown { thumbsUp = false }
@@ -204,7 +195,6 @@ struct MessageBubble: View {
                 .fill(Color.mcBorderDefault)
                 .frame(width: 0.5, height: 14)
 
-            // Copy
             Button {
                 vm.copyMessage(message)
                 showCopied = true
@@ -293,8 +283,8 @@ struct SearchSourcesRow: View {
 }
 
 // MARK: - Bubble Image
-// Reads from vm.decodedImages cache (populated once off-main-thread).
-// Never decodes synchronously — avoids stalling the main thread on every token re-render.
+// Reads from vm.decodedImages cache. For optimistic messages decodes local data
+// off the main thread. For history messages, downloads with Bearer auth.
 
 private struct BubbleImage: View {
     let attachment: MessageAttachment
@@ -307,26 +297,24 @@ private struct BubbleImage: View {
                     .resizable()
                     .scaledToFill()
             } else {
-                // History messages (no local data): fetch from server URL
-                AsyncImage(url: URL(string: attachment.url)) { phase in
-                    switch phase {
-                    case .success(let img): img.resizable().scaledToFill()
-                    default: SkeletonView()
-                    }
-                }
+                SkeletonView()
             }
         }
-        // Decode once off main thread, store in vm cache so re-renders are free
         .task(id: attachment.id) {
-            guard vm.decodedImages[attachment.id] == nil,
-                  let data = attachment.localImageData else { return }
-            let decoded: UIImage? = await withCheckedContinuation { continuation in
-                DispatchQueue.global(qos: .userInitiated).async {
-                    continuation.resume(returning: UIImage(data: data))
+            guard vm.decodedImages[attachment.id] == nil else { return }
+            if let data = attachment.localImageData {
+                // Optimistic user-uploaded: decode local JPEG off-main-thread
+                let decoded: UIImage? = await withCheckedContinuation { continuation in
+                    DispatchQueue.global(qos: .userInitiated).async {
+                        continuation.resume(returning: UIImage(data: data))
+                    }
                 }
-            }
-            if let decoded {
-                vm.cacheImage(decoded, forId: attachment.id)
+                if let decoded {
+                    vm.cacheImage(decoded, forId: attachment.id)
+                }
+            } else if !attachment.url.isEmpty {
+                // History messages (user-uploaded or AI-generated): download with auth
+                vm.downloadAndCacheImage(url: attachment.url, forId: attachment.id)
             }
         }
     }
@@ -336,13 +324,13 @@ private struct BubbleImage: View {
 
 struct AttachmentGrid: View {
     let attachments: [MessageAttachment]
-    let onImageTap: (String) -> Void
+    let onImageTap: (MessageAttachment) -> Void
     @ObservedObject var vm: ChatViewModel
 
     let imageAttachments: [MessageAttachment]
     let fileAttachments:  [MessageAttachment]
 
-    init(attachments: [MessageAttachment], onImageTap: @escaping (String) -> Void, vm: ChatViewModel) {
+    init(attachments: [MessageAttachment], onImageTap: @escaping (MessageAttachment) -> Void, vm: ChatViewModel) {
         self.attachments      = attachments
         self.onImageTap       = onImageTap
         self.vm               = vm
@@ -358,7 +346,7 @@ struct AttachmentGrid: View {
                         .frame(width: 220, height: 160)
                         .clipped()
                         .clipShape(RoundedRectangle(cornerRadius: 14))
-                        .onTapGesture { onImageTap(imageAttachments[0].url) }
+                        .onTapGesture { onImageTap(imageAttachments[0]) }
                 } else {
                     let cellSize: CGFloat = 108
                     let columns = [
@@ -371,7 +359,7 @@ struct AttachmentGrid: View {
                                 .frame(width: cellSize, height: cellSize)
                                 .clipped()
                                 .clipShape(RoundedRectangle(cornerRadius: 10))
-                                .onTapGesture { onImageTap(att.url) }
+                                .onTapGesture { onImageTap(att) }
                         }
                     }
                     .fixedSize()
@@ -395,9 +383,6 @@ struct AttachmentGrid: View {
 
 // MARK: - Conditional Context Menu
 
-/// Applies a context menu only when `show` is true.
-/// When false, the view renders without any long-press gesture, so child
-/// interactive controls (e.g. TextFields inside QuestionFormView) work normally.
 private struct ConditionalContextMenu<MenuContent: View>: ViewModifier {
     let show: Bool
     @ViewBuilder let menuContent: () -> MenuContent
