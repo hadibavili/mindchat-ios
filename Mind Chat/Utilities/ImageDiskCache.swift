@@ -1,4 +1,5 @@
 import UIKit
+import CryptoKit
 
 /// A simple disk-backed image cache stored in the system Caches directory.
 /// Images are keyed by their source URL and expire after 1 day.
@@ -18,7 +19,9 @@ final class ImageDiskCache {
     }()
 
     private func filename(for url: String) -> String {
-        "\(url.hashValue).jpg"
+        let digest = SHA256.hash(data: Data(url.utf8))
+        let hex = digest.map { String(format: "%02x", $0) }.joined()
+        return hex + ".jpg"
     }
 
     /// Returns a cached UIImage if one exists on disk and is younger than the TTL.
