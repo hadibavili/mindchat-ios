@@ -30,7 +30,17 @@ struct ChatView: View {
             ScrollViewReader { proxy in
                 ScrollView {
                     VStack(spacing: 0) {
-                        if vm.messages.isEmpty && !vm.isLoading {
+                        if vm.messages.isEmpty && vm.isLoading {
+                            VStack(spacing: 12) {
+                                ProgressView()
+                                    .scaleEffect(1.2)
+                                    .tint(.secondary)
+                                Text("Loading conversation…")
+                                    .font(.footnote)
+                                    .foregroundStyle(.secondary)
+                            }
+                            .containerRelativeFrame(.vertical)
+                        } else if vm.messages.isEmpty {
                             EmptyStateView(vm: vm)
                                 .containerRelativeFrame(.vertical)
                         }
@@ -145,6 +155,8 @@ struct ChatView: View {
 
             // Input
             ChatInputView(vm: vm)
+                .disabled(vm.isLoading)
+                .opacity(vm.isLoading ? 0.5 : 1)
         }
         .animation(.mcSnappy, value: vm.activeHashtagQuery != nil)
         .task {
