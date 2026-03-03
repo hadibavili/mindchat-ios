@@ -75,10 +75,10 @@ struct MainTabView: View {
 
             // Scrim
             if showSidebar {
-                Color.black.opacity(0.32)
+                Color.black.opacity(0.25)
                     .ignoresSafeArea()
                     .onTapGesture {
-                        withAnimation(.easeOut(duration: 0.25)) { showSidebar = false }
+                        withAnimation(.spring(duration: 0.3, bounce: 0.15)) { showSidebar = false }
                     }
                     .zIndex(1)
             }
@@ -101,7 +101,7 @@ struct MainTabView: View {
                 .zIndex(2)
             }
         }
-        .animation(.easeOut(duration: 0.25), value: showSidebar)
+        .animation(.spring(duration: 0.3, bounce: 0.15), value: showSidebar)
         .task { await conversationsVM.load() }
         .task { await chatVM.loadSettings() }
         .task { await topicsVM.load() }

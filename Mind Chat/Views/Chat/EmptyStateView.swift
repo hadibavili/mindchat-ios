@@ -6,23 +6,22 @@ struct EmptyStateView: View {
     @EnvironmentObject private var appState: AppState
     @State private var appeared = false
     @State private var greeting: String = ""
-    @State private var showPersonaPicker = false
 
-    private var suggestionsForCurrentMode: [String] {
+    private var suggestions: [String] {
         switch vm.chatMemory {
         case .alwaysPersist, .persistClearable:
             return [
-                "What do you remember about me?",
-                "Summarize my recent topics",
-                "What are my goals?",
-                "Help me reflect on my week"
+                "What do you remember?",
+                "Summarize my topics",
+                "Help me reflect",
+                "What are my goals?"
             ]
         case .fresh, .extractOnly:
             return [
-                "Help me think through a problem",
-                "Explain something to me simply",
+                "Think through a problem",
+                "Explain something simply",
                 "Give me creative ideas",
-                "What should I know about...?"
+                "What should I know?"
             ]
         }
     }
@@ -69,9 +68,6 @@ struct EmptyStateView: View {
                 defaultGreetingState
             }
         }
-        .sheet(isPresented: $showPersonaPicker) {
-            PersonaSelectorSheet(vm: vm)
-        }
     }
 
     // MARK: - Default Greeting State
@@ -79,75 +75,55 @@ struct EmptyStateView: View {
     private var defaultGreetingState: some View {
         VStack(spacing: 0) {
             Spacer()
+            Spacer()
+
+            // App icon
+            ZStack {
+                Circle()
+                    .fill(Color.mcTextPrimary.opacity(0.08))
+                    .frame(width: 48, height: 48)
+                Image(systemName: "brain.head.profile")
+                    .font(.system(size: 22, weight: .medium))
+                    .foregroundStyle(Color.mcTextPrimary)
+            }
+            .opacity(appeared ? 1 : 0)
+            .scaleEffect(appeared ? 1 : 0.8)
+            .animation(.mcGentle, value: appeared)
+            .padding(.bottom, 16)
 
             // Greeting
             Text(greeting)
-                .font(.system(size: 28, weight: .semibold))
+                .font(.system(size: 26, weight: .semibold))
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 24)
-                .padding(.bottom, 10)
                 .opacity(appeared ? 1 : 0)
                 .offset(y: appeared ? 0 : 12)
-                .animation(.mcGentle, value: appeared)
-
-            // Subtitle
-            Text("I remember everything you've shared — just pick up where you left off.")
-                .font(.footnote)
-                .foregroundStyle(Color.mcTextTertiary)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 32)
-                .padding(.bottom, 24)
-                .opacity(appeared ? 1 : 0)
-                .offset(y: appeared ? 0 : 8)
                 .animation(.mcGentle.delay(0.05), value: appeared)
-
-            // Chat mode chip
-            Button { showPersonaPicker = true } label: {
-                HStack(spacing: 5) {
-                    Image(systemName: vm.persona.icon)
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundStyle(vm.persona.color)
-                    Text(vm.persona.label)
-                        .font(.footnote.weight(.medium))
-                        .foregroundStyle(Color.mcTextPrimary)
-                    Image(systemName: "chevron.down")
-                        .font(.system(size: 10, weight: .medium))
-                        .foregroundStyle(Color.mcTextTertiary)
-                }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 6)
-                .background(Color.mcBgSecondary)
-                .clipShape(Capsule())
-            }
-            .padding(.bottom, 16)
-            .opacity(appeared ? 1 : 0)
-            .animation(.mcGentle.delay(0.08), value: appeared)
-
-            // Memory mode banner
-            MemoryModeBanner(mode: vm.chatMemory)
-                .padding(.horizontal, 16)
-                .padding(.bottom, 20)
-
-            // Suggestion cards
-            SuggestionGrid(suggestions: suggestionsForCurrentMode) { suggestion in
-                vm.inputText = suggestion
-            }
-            .padding(.horizontal, 16)
-            .padding(.bottom, 24)
-            .opacity(appeared ? 1 : 0)
-            .offset(y: appeared ? 0 : 8)
-            .animation(.mcGentle.delay(0.1), value: appeared)
 
             Spacer()
 
-            // Upgrade card for free users
-            if vm.plan == .free {
-                UpgradeBannerCard(onTap: {})
-                    .padding(.horizontal, 16)
-                    .padding(.bottom, 20)
-                    .opacity(appeared ? 1 : 0)
-                    .animation(.mcGentle.delay(0.1), value: appeared)
+            // Horizontal suggestion chips
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 10) {
+                    ForEach(suggestions, id: \.self) { suggestion in
+                        Button { vm.inputText = suggestion } label: {
+                            Text(suggestion)
+                                .font(.subheadline)
+                                .foregroundStyle(Color.mcTextSecondary)
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 10)
+                                .background(Color.mcBgSecondary)
+                                .clipShape(Capsule())
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(.horizontal, 20)
             }
+            .opacity(appeared ? 1 : 0)
+            .offset(y: appeared ? 0 : 8)
+            .animation(.mcGentle.delay(0.1), value: appeared)
+            .padding(.bottom, 16)
         }
         .onAppear {
             greeting = pickGreeting()
@@ -164,9 +140,9 @@ struct EmptyStateView: View {
             ZStack {
                 Circle()
                     .fill(Color.mcTextLink.opacity(0.1))
-                    .frame(width: 72, height: 72)
+                    .frame(width: 48, height: 48)
                 Image(systemName: "bubble.left.and.bubble.right")
-                    .font(.system(size: 28, weight: .medium))
+                    .font(.system(size: 22, weight: .medium))
                     .foregroundStyle(Color.mcTextLink)
             }
             .opacity(appeared ? 1 : 0)
@@ -190,36 +166,6 @@ struct EmptyStateView: View {
             Spacer()
         }
         .onAppear { appeared = true }
-    }
-}
-
-// MARK: - Suggestion Grid
-
-private struct SuggestionGrid: View {
-    let suggestions: [String]
-    let onSelect: (String) -> Void
-
-    private let columns = [
-        GridItem(.flexible(), spacing: 10),
-        GridItem(.flexible(), spacing: 10)
-    ]
-
-    var body: some View {
-        LazyVGrid(columns: columns, spacing: 10) {
-            ForEach(suggestions, id: \.self) { suggestion in
-                Button { onSelect(suggestion) } label: {
-                    Text(suggestion)
-                        .font(.footnote)
-                        .foregroundStyle(Color.mcTextSecondary)
-                        .multilineTextAlignment(.leading)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(12)
-                        .background(Color.mcBgSecondary)
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
-                }
-                .buttonStyle(.plain)
-            }
-        }
     }
 }
 

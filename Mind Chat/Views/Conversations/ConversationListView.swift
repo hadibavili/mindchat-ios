@@ -15,8 +15,49 @@ struct SidebarView: View {
     @EnvironmentObject private var appState: AppState
 
     @State private var searchText = ""
+    @State private var memoryExpanded = true
+    @State private var renamingConversation: Conversation?
+    @State private var renameText = ""
 
-    // MARK: - Filtered Topics
+    private let maxRecentConversations = 20
+
+    // MARK: - Filtering
+
+    private var filteredConversations: [Conversation] {
+        guard !searchText.isEmpty else { return conversationsVM.conversations }
+        return conversationsVM.conversations.filter {
+            ($0.title ?? "").localizedCaseInsensitiveContains(searchText)
+        }
+    }
+
+    private var recentConversations: [Conversation] {
+        Array(filteredConversations.prefix(maxRecentConversations))
+    }
+
+    private var groupedConversations: [ConversationDateGroup] {
+        let calendar = Calendar.current
+        let now = Date()
+        let order = ["Today", "Yesterday", "Previous 7 Days", "Previous 30 Days", "Older"]
+        var buckets: [String: [Conversation]] = [:]
+
+        for conv in recentConversations {
+            let days = calendar.dateComponents([.day], from: conv.updatedAt, to: now).day ?? 0
+            let key: String
+            switch days {
+            case 0:      key = "Today"
+            case 1:      key = "Yesterday"
+            case 2...7:  key = "Previous 7 Days"
+            case 8...30: key = "Previous 30 Days"
+            default:     key = "Older"
+            }
+            buckets[key, default: []].append(conv)
+        }
+
+        return order.compactMap { label in
+            guard let convs = buckets[label], !convs.isEmpty else { return nil }
+            return ConversationDateGroup(label: label, conversations: convs)
+        }
+    }
 
     private var filteredTopics: [TopicTreeNode] {
         guard !searchText.isEmpty else { return topicsVm.rootTopics }
@@ -47,25 +88,29 @@ struct SidebarView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // Top bar
             topBar
 
-            // Search
             searchBar
                 .padding(.horizontal, 12)
                 .padding(.bottom, 8)
 
-            // Scrollable content
             ScrollView(showsIndicators: false) {
                 LazyVStack(spacing: 0) {
                     newChatRow
-                    topicsListSection
+                    conversationsSection
+                    memorySection
                 }
                 .padding(.bottom, 12)
             }
 
-            // Bottom user row
             Divider()
+
+            // Upgrade row for free users
+            if chatVM.plan == .free {
+                upgradeRow
+                Divider()
+            }
+
             userRow
         }
         .background(Color.mcBgSidebar)
@@ -73,6 +118,19 @@ struct SidebarView: View {
             if case .topicsUpdated = event {
                 Task { await topicsVm.refresh() }
             }
+        }
+        .alert("Rename", isPresented: Binding(
+            get: { renamingConversation != nil },
+            set: { if !$0 { renamingConversation = nil } }
+        )) {
+            TextField("Title", text: $renameText)
+            Button("Save") {
+                if let conv = renamingConversation {
+                    Task { await conversationsVM.rename(conversation: conv, title: renameText) }
+                }
+                renamingConversation = nil
+            }
+            Button("Cancel", role: .cancel) { renamingConversation = nil }
         }
     }
 
@@ -85,9 +143,10 @@ struct SidebarView: View {
                 .foregroundStyle(Color.mcTextPrimary)
             Spacer()
             Button {
-                dismiss { showSettings = true }
+                dismiss()
+                chatVM.newChat()
             } label: {
-                Image(systemName: "gearshape")
+                Image(systemName: "square.and.pencil")
                     .font(.system(size: 17))
                     .foregroundStyle(Color.mcTextSecondary)
                     .frame(width: 36, height: 36)
@@ -130,6 +189,7 @@ struct SidebarView: View {
     private var newChatRow: some View {
         Button {
             dismiss()
+            chatVM.newChat()
         } label: {
             HStack(spacing: 12) {
                 Image(systemName: "square.and.pencil")
@@ -148,92 +208,176 @@ struct SidebarView: View {
         .buttonStyle(SidebarRowButtonStyle())
     }
 
-    // MARK: - Topics List
+    // MARK: - Recent Conversations Section
 
     @ViewBuilder
-    private var topicsListSection: some View {
-        if topicsVm.isLoading && topicsVm.rootTopics.isEmpty {
+    private var conversationsSection: some View {
+        if conversationsVM.isLoading && conversationsVM.conversations.isEmpty {
             ProgressView()
                 .frame(maxWidth: .infinity)
-                .padding(.vertical, 40)
-        } else if filteredTopics.isEmpty && !searchText.isEmpty {
+                .padding(.vertical, 24)
+        } else if !filteredConversations.isEmpty {
+            ForEach(groupedConversations, id: \.label) { group in
+                // Section header
+                HStack {
+                    Text(group.label)
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(Color.mcTextTertiary)
+                    Spacer()
+                }
+                .padding(.horizontal, 16)
+                .padding(.top, 16)
+                .padding(.bottom, 4)
+
+                ForEach(group.conversations) { conv in
+                    sidebarConversationRow(conv)
+                }
+            }
+
+            // "See all" when more conversations exist
+            if filteredConversations.count > maxRecentConversations {
+                Button {
+                    dismiss { showConversationHistory = true }
+                } label: {
+                    HStack {
+                        Spacer()
+                        Text("See all")
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundStyle(Color.mcTextLink)
+                        Spacer()
+                    }
+                    .padding(.vertical, 8)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+            }
+        } else if !searchText.isEmpty && filteredConversations.isEmpty && filteredTopics.isEmpty {
             Text("No results")
                 .font(.system(size: 14))
                 .foregroundStyle(Color.mcTextTertiary)
                 .frame(maxWidth: .infinity)
-                .padding(.vertical, 32)
-        } else if !filteredTopics.isEmpty {
-            // Section label
-            HStack {
-                Text("Memory")
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundStyle(Color.mcTextTertiary)
-                Spacer()
-                Button {
-                    dismiss { showKnowledge = true }
-                } label: {
-                    Text("See all")
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundStyle(Color.mcTextLink)
-                }
-                .buttonStyle(.plain)
-            }
-            .padding(.horizontal, 16)
-            .padding(.top, 16)
-            .padding(.bottom, 4)
+                .padding(.vertical, 24)
+        }
+    }
 
-            ForEach(filteredTopics) { node in
-                DrawerTopicNode(node: node, depth: 0) { selected in
-                    showTopic = TopicNavTarget(id: selected.id, title: selected.name)
-                    dismiss()
-                }
-            }
-        } else {
-            // Empty state — no topics yet
+    private func sidebarConversationRow(_ conv: Conversation) -> some View {
+        Button {
+            dismiss()
+            chatVM.newChat()
+            Task { await chatVM.loadMessages(conversationId: conv.id) }
+        } label: {
             HStack {
-                Text("Memory")
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundStyle(Color.mcTextTertiary)
-                Spacer()
-            }
-            .padding(.horizontal, 16)
-            .padding(.top, 16)
-            .padding(.bottom, 4)
-
-            HStack(spacing: 10) {
-                Image(systemName: "brain")
-                    .font(.system(size: 14))
-                    .foregroundStyle(Color.mcTextTertiary)
-                    .frame(width: 22)
-                Text("Topics appear as you chat")
-                    .font(.system(size: 14))
-                    .foregroundStyle(Color.mcTextTertiary)
+                Text(conv.title ?? "New Chat")
+                    .font(.system(size: 15))
+                    .foregroundStyle(Color.mcTextPrimary)
+                    .lineLimit(1)
                 Spacer()
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 10)
+            .contentShape(Rectangle())
         }
+        .buttonStyle(SidebarRowButtonStyle())
+        .contextMenu {
+            Button {
+                renamingConversation = conv
+                renameText = conv.title ?? ""
+            } label: {
+                Label("Rename", systemImage: "pencil")
+            }
+            Button(role: .destructive) {
+                Task { await conversationsVM.delete(conversation: conv) }
+            } label: {
+                Label("Delete", systemImage: "trash")
+            }
+        }
+    }
 
-        // History row
+    // MARK: - Memory Section (Collapsible)
+
+    @ViewBuilder
+    private var memorySection: some View {
+        // Collapsible header
         Button {
-            dismiss { showConversationHistory = true }
+            withAnimation(.mcSnappy) { memoryExpanded.toggle() }
+        } label: {
+            HStack {
+                Text("Memory")
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(Color.mcTextTertiary)
+                Image(systemName: memoryExpanded ? "chevron.down" : "chevron.right")
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundStyle(Color.mcTextTertiary)
+                Spacer()
+                if memoryExpanded {
+                    Button {
+                        dismiss { showKnowledge = true }
+                    } label: {
+                        Text("See all")
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundStyle(Color.mcTextLink)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.top, 16)
+            .padding(.bottom, 4)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+
+        if memoryExpanded {
+            if topicsVm.isLoading && topicsVm.rootTopics.isEmpty {
+                ProgressView()
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 20)
+            } else if filteredTopics.isEmpty {
+                HStack(spacing: 10) {
+                    Image(systemName: "brain")
+                        .font(.system(size: 14))
+                        .foregroundStyle(Color.mcTextTertiary)
+                        .frame(width: 22)
+                    Text("Topics appear as you chat")
+                        .font(.system(size: 14))
+                        .foregroundStyle(Color.mcTextTertiary)
+                    Spacer()
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 10)
+            } else {
+                ForEach(filteredTopics) { node in
+                    DrawerTopicNode(node: node, depth: 0) { selected in
+                        showTopic = TopicNavTarget(id: selected.id, title: selected.name)
+                        dismiss()
+                    }
+                }
+            }
+        }
+    }
+
+    // MARK: - Upgrade Row
+
+    private var upgradeRow: some View {
+        Button {
+            dismiss()
+            // TODO: navigate to subscription
         } label: {
             HStack(spacing: 12) {
-                Image(systemName: "clock")
+                Image(systemName: "sparkles")
                     .font(.system(size: 15))
-                    .foregroundStyle(Color.mcTextSecondary)
+                    .foregroundStyle(Color.mcTextLink)
                     .frame(width: 22)
-                Text("History")
-                    .font(.system(size: 15))
+                Text("Upgrade plan")
+                    .font(.system(size: 15, weight: .medium))
                     .foregroundStyle(Color.mcTextPrimary)
                 Spacer()
             }
             .padding(.horizontal, 16)
-            .padding(.vertical, 11)
+            .padding(.vertical, 12)
             .contentShape(Rectangle())
         }
         .buttonStyle(SidebarRowButtonStyle())
-        .padding(.top, 8)
     }
 
     // MARK: - User Row
@@ -243,7 +387,6 @@ struct SidebarView: View {
             dismiss { showSettings = true }
         } label: {
             HStack(spacing: 12) {
-                // Avatar
                 ZStack {
                     Circle()
                         .fill(Color.mcTextPrimary.gradient)
@@ -337,10 +480,8 @@ struct DrawerTopicNode: View {
         VStack(spacing: 0) {
             Button { onSelect(node) } label: {
                 HStack(spacing: 0) {
-                    // Indentation
                     Color.clear.frame(width: CGFloat(16 + depth * 16), height: 1)
 
-                    // Expand chevron or spacer
                     if !node.children.isEmpty {
                         Button {
                             withAnimation(.mcSnappy) { isExpanded.toggle() }

@@ -153,26 +153,23 @@ struct ChatView: View {
         }
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            // Hamburger (left)
+            // Sidebar toggle (left)
             ToolbarItem(placement: .navigationBarLeading) {
                 Button {
                     UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
                     withAnimation(.easeOut(duration: 0.25)) { showSidebar.toggle() }
                 } label: {
-                    Image(systemName: "line.3.horizontal")
+                    Image(systemName: "sidebar.leading")
                         .font(.system(size: 18))
                 }
             }
 
-            // Center: model + persona indicator (always visible, like ChatGPT)
+            // Center: model name + chevron
             ToolbarItem(placement: .principal) {
                 Button { showModelSelector = true } label: {
                     HStack(spacing: 5) {
-                        Circle()
-                            .fill(vm.persona.color)
-                            .frame(width: 7, height: 7)
                         Text(currentModelLabel)
-                            .font(.headline)
+                            .font(.system(size: 17, weight: .semibold))
                             .lineLimit(1)
                             .foregroundStyle(Color.primary)
                         Image(systemName: "chevron.down")
@@ -182,35 +179,33 @@ struct ChatView: View {
                 }
             }
 
-            // Right: new chat (empty) or ellipsis menu (in conversation)
+            // Right: new-chat pencil (always) + ellipsis menu (in conversation)
             ToolbarItem(placement: .navigationBarTrailing) {
-                if vm.conversationId != nil {
-                    Menu {
-                        Button { vm.newChat() } label: {
-                            Label("New Chat", systemImage: "square.and.pencil")
-                        }
-                        Divider()
-                        Button {
-                            renameText = vm.conversationTitle ?? ""
-                            showRenameAlert = true
-                        } label: {
-                            Label("Rename", systemImage: "pencil")
-                        }
-                        Button(role: .destructive) {
-                            Task {
-                                if let id = vm.conversationId {
-                                    await conversationsVM.delete(conversation: Conversation(id: id, title: vm.conversationTitle, createdAt: nil, updatedAt: Date()))
+                HStack(spacing: 4) {
+                    if vm.conversationId != nil {
+                        Menu {
+                            Button {
+                                renameText = vm.conversationTitle ?? ""
+                                showRenameAlert = true
+                            } label: {
+                                Label("Rename", systemImage: "pencil")
+                            }
+                            Button(role: .destructive) {
+                                Task {
+                                    if let id = vm.conversationId {
+                                        await conversationsVM.delete(conversation: Conversation(id: id, title: vm.conversationTitle, createdAt: nil, updatedAt: Date()))
+                                    }
+                                    vm.newChat()
                                 }
-                                vm.newChat()
+                            } label: {
+                                Label("Delete", systemImage: "trash")
                             }
                         } label: {
-                            Label("Delete", systemImage: "trash")
+                            Image(systemName: "ellipsis.circle")
+                                .font(.system(size: 18))
                         }
-                    } label: {
-                        Image(systemName: "ellipsis.circle")
-                            .font(.system(size: 18))
                     }
-                } else {
+
                     Button { vm.newChat() } label: {
                         Image(systemName: "square.and.pencil")
                             .font(.system(size: 18))
@@ -257,23 +252,24 @@ struct ChatView: View {
 
 struct ThinkingBubble: View {
 
-    @State private var dotPhase = 0
+    let startTime: Date
+    @State private var elapsed: Int = 0
     @State private var timer: Timer?
 
     var body: some View {
-        HStack(spacing: 5) {
-            ForEach(0..<3, id: \.self) { i in
-                Circle()
-                    .fill(Color.secondary.opacity(0.5))
-                    .frame(width: 7, height: 7)
-                    .scaleEffect(dotPhase == i ? 1.4 : 1.0)
-                    .animation(.easeInOut(duration: 0.28), value: dotPhase)
-            }
+        HStack(spacing: 6) {
+            ProgressView()
+                .scaleEffect(0.7)
+                .tint(.secondary)
+            Text("thinking…")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
             Spacer()
         }
         .onAppear {
-            timer = Timer.scheduledTimer(withTimeInterval: 0.38, repeats: true) { _ in
-                dotPhase = (dotPhase + 1) % 3
+            elapsed = max(0, Int(Date().timeIntervalSince(startTime)))
+            timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { _ in
+                elapsed = max(0, Int(Date().timeIntervalSince(startTime)))
             }
         }
         .onDisappear { timer?.invalidate() }

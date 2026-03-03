@@ -3,7 +3,7 @@ import PhotosUI
 import AVFoundation
 import UniformTypeIdentifiers
 
-private let kCharLimit = 4000
+private let kCharLimit = 10000
 
 struct ChatInputView: View {
 
@@ -19,6 +19,8 @@ struct ChatInputView: View {
     @State private var recordingTimer: Timer?
     @State private var duration: TimeInterval = 0
     @State private var dismissedRecommendationIntent: QueryIntent?
+    @State private var showPersonaPicker = false
+    @State private var showExpandedComposer = false
 
     private var charCount: Int { vm.inputText.count }
 
@@ -82,6 +84,8 @@ struct ChatInputView: View {
                 // Main input container
                 VStack(spacing: 0) {
 
+                    personaChipRow
+
                     // Attachment thumbnails
                     if !vm.attachments.isEmpty {
                         AttachmentPreview(attachments: $vm.attachments)
@@ -130,7 +134,7 @@ struct ChatInputView: View {
                         .font(.body)
                         .lineLimit(1...8)
                         .padding(.horizontal, 16)
-                        .padding(.top, 14)
+                        .padding(.top, 10)
                         .padding(.bottom, 10)
                         .focused($isInputFocused)
                         .disabled(vm.isStreaming)
@@ -221,11 +225,64 @@ struct ChatInputView: View {
         .sheet(isPresented: $showTopicPicker) {
             TopicPickerSheet(vm: vm)
         }
+        .sheet(isPresented: $showPersonaPicker) {
+            PersonaSelectorSheet(vm: vm)
+        }
+        .sheet(isPresented: $showExpandedComposer) {
+            ExpandedComposerSheet(
+                text: $vm.inputText,
+                placeholder: vm.topicFocus != nil ? "Ask about \(vm.topicFocus!.name)..." : "Ask anything",
+                onSend: { Task { await vm.send() } }
+            )
+        }
         .animation(.mcSmooth, value: vm.topicFocus?.id)
         .animation(.mcGentle, value: visibleRecommendation?.modelId)
         .onChange(of: vm.modelRecommendation?.intent) { _, new in
             if let new, new != dismissedRecommendationIntent { dismissedRecommendationIntent = nil }
         }
+    }
+
+    // MARK: - Persona Chip Row
+
+    private var personaChipRow: some View {
+        HStack {
+            Button { showPersonaPicker = true } label: {
+                HStack(spacing: 4) {
+                    Image(systemName: vm.persona.icon)
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(vm.persona.color)
+                    Text(vm.persona.label)
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(.primary)
+                    Image(systemName: "chevron.down")
+                        .font(.system(size: 9, weight: .semibold))
+                        .foregroundStyle(.secondary)
+                }
+                .padding(.horizontal, 10)
+                .padding(.vertical, 5)
+                .background(vm.persona.color.opacity(0.10))
+                .clipShape(Capsule())
+                .animation(.mcSnappy, value: vm.persona)
+            }
+            .buttonStyle(.plain)
+
+            Spacer()
+
+            if !vm.inputText.isEmpty {
+                Button { showExpandedComposer = true } label: {
+                    Image(systemName: "arrow.up.left.and.arrow.down.right")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(Color.mcTextSecondary)
+                        .frame(width: 28, height: 28)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .transition(.opacity.combined(with: .scale(scale: 0.7)))
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.top, 12)
+        .animation(.mcSnappy, value: vm.inputText.isEmpty)
     }
 
     // MARK: - Send Button Helpers

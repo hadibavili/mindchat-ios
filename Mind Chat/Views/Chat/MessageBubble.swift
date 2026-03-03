@@ -49,8 +49,7 @@ struct MessageBubble: View {
             }
         }
         .padding(.horizontal, 16)
-        .padding(.top, isUser ? 4 : 10)
-        .padding(.bottom, isUser ? 4 : 4)
+        .padding(.vertical, 6)
         .background(isHighlighted ? themeManager.accentColor.opacity(0.07) : Color.clear)
         .animation(.easeInOut(duration: 0.4), value: isHighlighted)
         // Skip contextMenu on question-form messages — it blocks TextField interaction
@@ -66,7 +65,7 @@ struct MessageBubble: View {
 
     private var userBubble: some View {
         HStack {
-            Spacer(minLength: 0)
+            Spacer(minLength: 60)
             VStack(alignment: .trailing, spacing: 6) {
                 if let attachments = message.attachments, !attachments.isEmpty {
                     AttachmentGrid(attachments: attachments, onImageTap: { url in
@@ -84,7 +83,6 @@ struct MessageBubble: View {
                         .clipShape(RoundedRectangle(cornerRadius: 18))
                 }
             }
-            .frame(maxWidth: UIScreen.main.bounds.width * 0.78)
         }
     }
 
