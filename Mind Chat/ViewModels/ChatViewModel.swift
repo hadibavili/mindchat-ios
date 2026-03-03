@@ -157,7 +157,6 @@ final class ChatViewModel: ObservableObject {
 
         // Lock the UI immediately so the button can't be tapped again
         inputText           = ""
-        modelRecommendation = nil
         attachments         = []
         extractedTopics     = []
         errorMessage    = nil

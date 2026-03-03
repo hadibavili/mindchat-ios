@@ -25,7 +25,7 @@ struct ChatInputView: View {
     private var charCount: Int { vm.inputText.count }
 
     private var visibleRecommendation: ModelRecommendation? {
-        guard !vm.isStreaming, let rec = vm.modelRecommendation else { return nil }
+        guard let rec = vm.modelRecommendation else { return nil }
         if dismissedRecommendationIntent == rec.intent { return nil }
         return rec
     }
@@ -81,32 +81,9 @@ struct ChatInputView: View {
                         removal:   .move(edge: .bottom).combined(with: .opacity)
                     ))
             } else {
-                // Main input container
                 VStack(spacing: 0) {
 
-                    personaChipRow
-
-                    // Attachment thumbnails
-                    if !vm.attachments.isEmpty {
-                        AttachmentPreview(attachments: $vm.attachments)
-                            .padding(.horizontal, 14)
-                            .padding(.top, 10)
-                            .transition(.move(edge: .top).combined(with: .opacity))
-                    }
-
-                    // Topic focus chip
-                    if let focus = vm.topicFocus {
-                        HStack {
-                            TopicFocusChip(focus: focus) {
-                                vm.clearTopicFocus()
-                            }
-                            Spacer()
-                        }
-                        .padding(.horizontal, 14)
-                        .padding(.top, 10)
-                    }
-
-                    // Model recommendation banner
+                    // Model recommendation banner — floats above the rounded input box
                     if let rec = visibleRecommendation {
                         ModelRecommendationBanner(
                             recommendation: rec,
@@ -117,86 +94,113 @@ struct ChatInputView: View {
                             },
                             onDismiss: { dismissedRecommendationIntent = rec.intent }
                         )
-                        .padding(.horizontal, 14)
-                        .padding(.top, 8)
+                        .padding(.horizontal, 16)
+                        .padding(.top, 10)
+                        .padding(.bottom, 6)
                         .transition(.asymmetric(
-                            insertion: .move(edge: .top).combined(with: .opacity),
-                            removal:   .move(edge: .top).combined(with: .opacity)
+                            insertion: .move(edge: .bottom).combined(with: .opacity),
+                            removal:   .move(edge: .bottom).combined(with: .opacity)
                         ))
                     }
 
-                    // Text field
-                    TextField(
-                        vm.topicFocus != nil ? "Ask about \(vm.topicFocus!.name)..." : "Ask anything",
-                        text: $vm.inputText,
-                        axis: .vertical
-                    )
-                        .font(.body)
-                        .lineLimit(1...8)
-                        .padding(.horizontal, 16)
-                        .padding(.top, 10)
-                        .padding(.bottom, 10)
-                        .focused($isInputFocused)
-                        .disabled(vm.isStreaming)
+                    // Main input container
+                    VStack(spacing: 0) {
 
-                    // Bottom toolbar
-                    HStack(alignment: .center, spacing: 0) {
+                        personaChipRow
 
-                        // + Attach button
-                        Menu {
-                            Button { showTopicPicker = true } label: {
-                                Label("Focus on Topic", systemImage: "brain.head.profile")
-                            }
-
-                            Divider()
-
-                            if vm.imageUploadsEnabled {
-                                Button { showPhotoPicker = true } label: {
-                                    Label("Photos", systemImage: "photo")
-                                }
-                                Button { showDocumentPicker = true } label: {
-                                    Label("Files", systemImage: "doc")
-                                }
-                            } else {
-                                Button {} label: {
-                                    Label("Upgrade for file uploads", systemImage: "lock.fill")
-                                }
-                                .disabled(true)
-                            }
-                        } label: {
-                            Image(systemName: "plus")
-                                .font(.system(size: 18, weight: .medium))
-                                .foregroundStyle(Color.mcTextSecondary)
-                                .frame(width: 36, height: 36)
-                                .contentShape(Circle())
+                        // Attachment thumbnails
+                        if !vm.attachments.isEmpty {
+                            AttachmentPreview(attachments: $vm.attachments)
+                                .padding(.horizontal, 14)
+                                .padding(.top, 10)
+                                .transition(.move(edge: .top).combined(with: .opacity))
                         }
 
-                        Spacer()
-
-                        // Character counter
-                        if showCounter {
-                            Text("\(charCount)/\(kCharLimit)")
-                                .font(.caption.monospacedDigit())
-                                .foregroundStyle(isOverLimit ? Color.accentRed : Color.mcTextTertiary)
-                                .animation(.none, value: charCount)
-                                .padding(.trailing, 10)
+                        // Topic focus chip
+                        if let focus = vm.topicFocus {
+                            HStack {
+                                TopicFocusChip(focus: focus) {
+                                    vm.clearTopicFocus()
+                                }
+                                Spacer()
+                            }
+                            .padding(.horizontal, 14)
+                            .padding(.top, 10)
                         }
 
-                        // Send / Stop / Mic
-                        sendButton
+                        // Text field
+                        TextField(
+                            vm.topicFocus != nil ? "Ask about \(vm.topicFocus!.name)..." : "Ask anything",
+                            text: $vm.inputText,
+                            axis: .vertical
+                        )
+                            .font(.body)
+                            .lineLimit(1...8)
+                            .padding(.horizontal, 16)
+                            .padding(.top, 10)
+                            .padding(.bottom, 10)
+                            .focused($isInputFocused)
+                            .disabled(vm.isStreaming)
+
+                        // Bottom toolbar
+                        HStack(alignment: .center, spacing: 0) {
+
+                            // + Attach button
+                            Menu {
+                                Button { showTopicPicker = true } label: {
+                                    Label("Focus on Topic", systemImage: "brain.head.profile")
+                                }
+
+                                Divider()
+
+                                if vm.imageUploadsEnabled {
+                                    Button { showPhotoPicker = true } label: {
+                                        Label("Photos", systemImage: "photo")
+                                    }
+                                    Button { showDocumentPicker = true } label: {
+                                        Label("Files", systemImage: "doc")
+                                    }
+                                } else {
+                                    Button {} label: {
+                                        Label("Upgrade for file uploads", systemImage: "lock.fill")
+                                    }
+                                    .disabled(true)
+                                }
+                            } label: {
+                                Image(systemName: "plus")
+                                    .font(.system(size: 18, weight: .medium))
+                                    .foregroundStyle(Color.mcTextSecondary)
+                                    .frame(width: 36, height: 36)
+                                    .contentShape(Circle())
+                            }
+
+                            Spacer()
+
+                            // Character counter
+                            if showCounter {
+                                Text("\(charCount)/\(kCharLimit)")
+                                    .font(.caption.monospacedDigit())
+                                    .foregroundStyle(isOverLimit ? Color.accentRed : Color.mcTextTertiary)
+                                    .animation(.none, value: charCount)
+                                    .padding(.trailing, 10)
+                            }
+
+                            // Send / Stop / Mic
+                            sendButton
+                        }
+                        .padding(.horizontal, 12)
+                        .padding(.bottom, 12)
                     }
-                    .padding(.horizontal, 12)
-                    .padding(.bottom, 12)
+                    .background(Color.mcBgSecondary)
+                    .clipShape(RoundedRectangle(cornerRadius: 22))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 22)
+                            .stroke(Color.mcBorderDefault, lineWidth: 0.5)
+                    )
+                    .padding(.horizontal, 16)
+                    .padding(.top, visibleRecommendation != nil ? 4 : 10)
+                    .padding(.bottom, 10)
                 }
-                .background(Color.mcBgSecondary)
-                .clipShape(RoundedRectangle(cornerRadius: 22))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 22)
-                        .stroke(Color.mcBorderDefault, lineWidth: 0.5)
-                )
-                .padding(.horizontal, 16)
-                .padding(.top, 10)
-                .padding(.bottom, 10)
             }
         }
         .background(Color.mcBgPrimary)
@@ -580,7 +584,8 @@ private struct ModelRecommendationBanner: View {
             Text("Try **\(recommendation.modelLabel)** for \(recommendation.intent.description)")
                 .font(.footnote)
                 .foregroundStyle(Color.mcTextSecondary)
-                .lineLimit(1)
+                .lineLimit(2)
+                .fixedSize(horizontal: false, vertical: true)
 
             Spacer(minLength: 4)
 
@@ -608,7 +613,7 @@ private struct ModelRecommendationBanner: View {
             .buttonStyle(.plain)
         }
         .padding(.horizontal, 10)
-        .padding(.vertical, 7)
+        .padding(.vertical, 11)
         .background(
             RoundedRectangle(cornerRadius: 10)
                 .fill(providerColor.opacity(0.07))
