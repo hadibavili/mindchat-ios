@@ -212,9 +212,11 @@ struct ChatInputView: View {
         .animation(.mcSmooth, value: vm.isTranscribing)
         .animation(.mcSmooth, value: vm.isUploading)
         .animation(.mcSmooth, value: vm.attachments.count)
-        .onChange(of: vm.isStreaming) { _, streaming in
-            // Dismiss keyboard when the LLM finishes replying
-            if !streaming { isInputFocused = false }
+        .onChange(of: vm.isStreaming) { _, _ in
+            // Dismiss keyboard on any streaming state change:
+            // • on start: user sent, hide keyboard immediately
+            // • on end: TextField re-enables, but focus is already false so keyboard won't reappear
+            isInputFocused = false
         }
         .photosPicker(
             isPresented: $showPhotoPicker,
