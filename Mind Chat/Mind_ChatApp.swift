@@ -10,6 +10,11 @@ struct Mind_ChatApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .task {
+                    Task.detached(priority: .background) {
+                        ImageDiskCache.shared.purgeExpired()
+                    }
+                }
                 .environmentObject(appState)
                 .environmentObject(themeManager)
                 .preferredColorScheme(themeManager.preferredColorScheme)
@@ -27,11 +32,6 @@ struct Mind_ChatApp: App {
                     OnboardingView()
                         .environmentObject(appState)
                 }
-        }
-        .task {
-            Task.detached(priority: .background) {
-                ImageDiskCache.shared.purgeExpired()
-            }
         }
         .onChange(of: scenePhase) { _, newPhase in
             switch newPhase {
