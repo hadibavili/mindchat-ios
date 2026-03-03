@@ -270,6 +270,16 @@ struct SettingsUpdateRequest: Codable, Sendable {
     }
 }
 
+// MARK: - Model Suggestion
+
+struct SuggestModelRequest: Encodable, Sendable {
+    let prompt: String
+}
+
+struct SuggestModelResponse: Decodable, Sendable {
+    let category: QueryIntent?
+}
+
 // MARK: - Chat Request
 
 struct HistoryMessage: Codable, Sendable {
