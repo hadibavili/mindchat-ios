@@ -28,6 +28,11 @@ struct Mind_ChatApp: App {
                         .environmentObject(appState)
                 }
         }
+        .task {
+            Task.detached(priority: .background) {
+                ImageDiskCache.shared.purgeExpired()
+            }
+        }
         .onChange(of: scenePhase) { _, newPhase in
             switch newPhase {
             case .background:

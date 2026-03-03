@@ -68,6 +68,7 @@ final class ChatViewModel: ObservableObject {
     // MARK: - Private
 
     private var streamTask: Task<Void, Never>?
+    private var recommendationTask: Task<Void, Never>?
     private var recordingTimer: Timer?
     private var cancellables = Set<AnyCancellable>()
     /// True while the model is actively streaming a tool call block; suppresses those tokens from the UI.
@@ -88,6 +89,8 @@ final class ChatViewModel: ObservableObject {
                     self?.provider = p
                     self?.model    = m
                     self?.modelRecommendation = nil
+                    self?.recommendationTask?.cancel()
+                    self?.recommendationTask = nil
                 case .appMovedToBackground:
                     if self?.isStreaming == true {
                         BackgroundStreamManager.shared.beginBackgroundProcessing()
@@ -101,7 +104,7 @@ final class ChatViewModel: ObservableObject {
             .store(in: &cancellables)
 
         $inputText
-            .debounce(for: .milliseconds(500), scheduler: RunLoop.main)
+            .debounce(for: .milliseconds(600), scheduler: RunLoop.main)
             .sink { [weak self] text in
                 print("[ModelRec] debounce fired, text='\(text.prefix(40))'")
                 self?.updateModelRecommendation(for: text)
@@ -470,6 +473,13 @@ final class ChatViewModel: ObservableObject {
     func downloadAndCacheImage(url: String, forId id: String) {
         let resolvedURL = proxyBlobURL(url)
         Task {
+            // L2: disk cache hit — skip network entirely
+            if let cached = ImageDiskCache.shared.read(for: url) {
+                print("[ChatViewModel] disk cache hit for id=\(id)")
+                await MainActor.run { cacheImage(cached, forId: id) }
+                return
+            }
+
             guard let imageURL = URL(string: resolvedURL) else {
                 print("[ChatViewModel] invalid generated image URL: \(resolvedURL)")
                 return
@@ -487,7 +497,9 @@ final class ChatViewModel: ObservableObject {
                     print("[ChatViewModel] could not decode image data (\(data.count) bytes)")
                     return
                 }
-                print("[ChatViewModel] image decoded successfully, caching for id=\(id)")
+                // Write to disk (L2) then populate memory (L1)
+                ImageDiskCache.shared.write(image, for: url)
+                print("[ChatViewModel] image cached to disk for id=\(id)")
                 await MainActor.run { cacheImage(image, forId: id) }
             } catch {
                 print("[ChatViewModel] image download failed: \(error)")
@@ -660,13 +672,38 @@ final class ChatViewModel: ObservableObject {
     }
 
     private func updateModelRecommendation(for text: String) {
-        let intent = QueryIntentDetector.detectIntent(in: text)
-        let rec = QueryIntentDetector.recommend(
-            for: intent, plan: plan,
-            currentProvider: provider, currentModelId: model
-        )
-        print("[ModelRec] intent=\(intent) plan=\(plan.rawValue) provider=\(provider.rawValue) → rec=\(rec?.modelId ?? "nil")")
-        if rec != modelRecommendation { modelRecommendation = rec }
+        recommendationTask?.cancel()
+        recommendationTask = nil
+
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        guard trimmed.count >= 12, trimmed.count <= 500 else {
+            modelRecommendation = nil
+            return
+        }
+
+        let snapshotPlan = plan
+        let snapshotProvider = provider
+        let snapshotModel = model
+
+        recommendationTask = Task {
+            let intent = await QueryIntentDetector.suggestModel(prompt: trimmed)
+            guard !Task.isCancelled else { return }
+
+            let rec: ModelRecommendation?
+            if let intent {
+                rec = QueryIntentDetector.recommend(
+                    for: intent, plan: snapshotPlan,
+                    currentProvider: snapshotProvider, currentModelId: snapshotModel
+                )
+            } else {
+                rec = nil
+            }
+
+            guard !Task.isCancelled else { return }
+            print("[ModelRec] intent=\(intent?.rawValue ?? "nil") plan=\(snapshotPlan.rawValue) provider=\(snapshotProvider.rawValue) → rec=\(rec?.modelId ?? "nil")")
+            if rec != modelRecommendation { modelRecommendation = rec }
+        }
     }
 
     // MARK: - Persona
