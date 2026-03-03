@@ -70,6 +70,8 @@ final class ChatViewModel: ObservableObject {
     private var streamTask: Task<Void, Never>?
     private var recordingTimer: Timer?
     private var cancellables = Set<AnyCancellable>()
+    /// True while the model is actively streaming a tool call block; suppresses those tokens from the UI.
+    private var isInToolCallBlock = false
 
     private let chat     = ChatService.shared
     private let upload   = UploadService.shared
@@ -332,6 +334,7 @@ final class ChatViewModel: ObservableObject {
             }
             appendToken(token, to: assistantId)
         case .searching:
+            isInToolCallBlock = false   // tool call tokens have ended
             isSearching = true
         case .searchComplete(_, let sources):
             isSearching = false
@@ -350,6 +353,7 @@ final class ChatViewModel: ObservableObject {
             eventBus.publish(.topicsUpdated)
         case .generatingImage:
             print("[ChatViewModel] generating_image event — image is being created")
+            isInToolCallBlock = false   // tool call tokens have ended
             isGeneratingImage = true
 
         case .imageGenerated(let url, let name):
@@ -383,7 +387,35 @@ final class ChatViewModel: ObservableObject {
 
     private func appendToken(_ token: String, to id: String) {
         guard let idx = messages.firstIndex(where: { $0.id == id }) else { return }
-        messages[idx].content += token
+
+        // Suppress all tokens while inside a tool call block
+        if isInToolCallBlock { return }
+
+        let current  = messages[idx].content
+        let candidate = current + token
+
+        // Detect XML-style tool call block opener — enter suppression mode
+        for opener in ["<tool_call>", "<|tool_call|>"] {
+            if let range = candidate.range(of: opener, options: .caseInsensitive) {
+                messages[idx].content = String(candidate[candidate.startIndex..<range.lowerBound])
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                isInToolCallBlock = true
+                return
+            }
+        }
+
+        // Detect bare "tool\n" pattern emitted by some models (no XML tags):
+        //   token #1: "tool"   token #2: "\n"   token #3+: function name, json …
+        // We recognise the boundary when we see "tool" sitting on its own line.
+        let barePattern = #"(?:^|\n)tool\n"#
+        if let range = candidate.range(of: barePattern, options: .regularExpression) {
+            messages[idx].content = String(candidate[candidate.startIndex..<range.lowerBound])
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            isInToolCallBlock = true
+            return
+        }
+
+        messages[idx].content = candidate
     }
 
     private func updateTopics(_ topics: [ExtractedTopic], for id: String) {
@@ -395,6 +427,36 @@ final class ChatViewModel: ObservableObject {
         guard let idx = messages.firstIndex(where: { $0.id == id }) else { return }
         messages[idx].sources = sources
     }
+//
+//    /// Strip tool call / tool result blocks that some models leak as plain text in token events.
+//    private func stripToolCallBlocks(_ text: String) -> String {
+//        var result = text
+//        // Full blocks (content between open and close tags)
+//        let blockPatterns = [
+//            #"<tool_call>[\s\S]*?<\/tool_call>"#,
+//            #"<tool_result>[\s\S]*?<\/tool_result>"#,
+//            #"<\|tool_call\|>[\s\S]*?<\|\/tool_call\|>"#,
+//            #"<\|tool_result\|>[\s\S]*?<\|\/tool_result\|>"#,
+//        ]
+//        for pattern in blockPatterns {
+//            result = result.replacingOccurrences(
+//                of: pattern, with: "",
+//                options: [.regularExpression, .caseInsensitive]
+//            )
+//        }
+//        // Orphaned open/close tags (unclosed blocks or stray delimiters)
+//        let tagPattern = #"<\/?tool_(call|result)>|<\|\/?\s*tool_(call|result)\s*\|>"#
+//        result = result.replacingOccurrences(
+//            of: tagPattern, with: "",
+//            options: [.regularExpression, .caseInsensitive]
+//        )
+//        // Bare "tool\n<functionName>" format — truncate from the pattern to end-of-string
+//        // (the live suppression handles this during streaming; this is the safety-net pass)
+//        if let range = result.range(of: #"(?:^|\n)tool\n\w"#, options: .regularExpression) {
+//            result = String(result[result.startIndex..<range.lowerBound])
+//        }
+//        return result.trimmingCharacters(in: .whitespacesAndNewlines)
+//    }
 
     /// Rewrite raw private Vercel Blob URLs to go through the /api/blob proxy.
     private func proxyBlobURL(_ url: String) -> String {
@@ -438,10 +500,12 @@ final class ChatViewModel: ObservableObject {
         isSearching        = false
         isExtracting       = false
         isGeneratingImage  = false
+        isInToolCallBlock  = false
         thinkingStart      = nil
         streamTask    = nil
 
         guard let idx = messages.firstIndex(where: { $0.id == assistantId }) else { return }
+      
         messages[idx].isStreaming = false
         if let error {
             messages[idx].isError = true
