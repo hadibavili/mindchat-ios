@@ -452,7 +452,11 @@ struct ChatInputView: View {
             do {
                 let text = try await UploadService.shared.transcribe(audioURL: url)
                 print("[Voice] Transcription succeeded, text length=\(text.count): \"\(text.prefix(100))\"")
+                if text.isEmpty {
+                    print("[Voice] WARNING: Server returned empty transcription text")
+                }
                 vm.inputText += text
+                print("[Voice] inputText after append (\(vm.inputText.count) chars): \"\(vm.inputText.prefix(100))\"")
             } catch {
                 print("[Voice] Transcription FAILED: \(error)")
                 vm.errorMessage = "Transcription failed. Please try again."

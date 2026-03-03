@@ -144,6 +144,9 @@ final class APIClient {
                prefix.lowercased().hasPrefix("<!doctype") || prefix.lowercased().hasPrefix("<html") {
                 throw AppError.unauthorized
             }
+            // Log raw response for debugging
+            let rawPreview = String(data: data.prefix(500), encoding: .utf8) ?? "<non-utf8>"
+            print("[APIClient] Raw response (\(req.httpMethod ?? "?") \(req.url?.path ?? "?")): \(rawPreview)")
             do {
                 return try JSONDecoder.mindChat.decode(T.self, from: data)
             } catch {
