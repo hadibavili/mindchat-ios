@@ -47,12 +47,12 @@ struct MainTabView: View {
                     showSidebar: $showSidebar,
                     showConversationHistory: $showConversationHistory
                 )
+                .navigationDestination(isPresented: $showSettings) {
+                    SettingsView()
+                }
             }
             .sheet(isPresented: $showKnowledge) {
                 TopicsDashboardView(vm: topicsVM)
-            }
-            .sheet(isPresented: $showSettings) {
-                SettingsView()
             }
             .sheet(isPresented: $showConversationHistory) {
                 ConversationHistoryView(

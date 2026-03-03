@@ -107,8 +107,13 @@ struct ChatView: View {
                     .animation(.mcGentle, value: vm.messages.count)
                 }
                 .scrollDismissesKeyboard(.interactively)
-                .onChange(of: vm.messages.count) { _, _ in
-                    if atBottom { scrollToBottom(proxy) }
+                .onScrollGeometryChange(for: Bool.self) { geo in
+                    geo.contentOffset.y + geo.containerSize.height >= geo.contentSize.height - 50
+                } action: { _, isNearBottom in
+                    atBottom = isNearBottom
+                }
+                .onChange(of: vm.messages.count) { oldCount, _ in
+                    if oldCount == 0 || atBottom { scrollToBottom(proxy) }
                 }
                 .onChange(of: vm.isStreaming) { _, streaming in
                     if streaming && atBottom { scrollToBottom(proxy) }
@@ -119,13 +124,6 @@ struct ChatView: View {
                     while !Task.isCancelled && vm.isStreaming {
                         if atBottom { scrollToBottom(proxy) }
                         try? await Task.sleep(nanoseconds: 100_000_000) // 100ms
-                    }
-                }
-                .overlay(alignment: .bottomTrailing) {
-                    if !atBottom {
-                        ScrollToBottomButton { scrollToBottom(proxy) }
-                            .padding(16)
-                            .transition(.scale.combined(with: .opacity))
                     }
                 }
                 .animation(.mcSnappy, value: atBottom)
