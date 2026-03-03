@@ -13,6 +13,7 @@ struct ChatInputView: View {
     @State private var selectedPhotoItems: [PhotosPickerItem] = []
     @State private var showPhotoPicker = false
     @State private var showDocumentPicker = false
+    @State private var showCamera = false
     @State private var showTopicPicker = false
     @State private var isRecording = false
     @State private var audioRecorder: AVAudioRecorder?
@@ -154,6 +155,9 @@ struct ChatInputView: View {
                                 Divider()
 
                                 if vm.imageUploadsEnabled {
+                                    Button { showCamera = true } label: {
+                                        Label("Take Photo", systemImage: "camera")
+                                    }
                                     Button { showPhotoPicker = true } label: {
                                         Label("Photos", systemImage: "photo")
                                     }
@@ -220,6 +224,12 @@ struct ChatInputView: View {
         )
         .onChange(of: selectedPhotoItems) { _, items in
             Task { await loadPhotos(items) }
+        }
+        .fullScreenCover(isPresented: $showCamera) {
+            CameraPickerView { image in
+                addCameraPhoto(image)
+            }
+            .ignoresSafeArea()
         }
         .sheet(isPresented: $showDocumentPicker) {
             DocumentPickerView { urls in
@@ -375,6 +385,18 @@ struct ChatInputView: View {
             vm.attachments.append(att)
         }
         selectedPhotoItems = []
+    }
+
+    // MARK: - Camera
+
+    private func addCameraPhoto(_ image: UIImage) {
+        guard let jpegData = image.jpegData(compressionQuality: 0.85) else { return }
+        let name = "\(UUID().uuidString).jpg"
+        let tmpURL = FileManager.default.temporaryDirectory.appendingPathComponent(name)
+        try? jpegData.write(to: tmpURL)
+        var att = PendingAttachment(localURL: tmpURL, name: name, kind: .image, mimeType: "image/jpeg")
+        att.data = jpegData
+        vm.attachments.append(att)
     }
 
     // MARK: - Files
@@ -626,6 +648,42 @@ private struct ModelRecommendationBanner: View {
                         .stroke(providerColor.opacity(0.2), lineWidth: 1)
                 )
         )
+    }
+}
+
+// MARK: - Camera Picker
+
+struct CameraPickerView: UIViewControllerRepresentable {
+    let onCapture: (UIImage) -> Void
+    @Environment(\.dismiss) private var dismiss
+
+    func makeCoordinator() -> Coordinator { Coordinator(onCapture: onCapture, dismiss: dismiss) }
+
+    func makeUIViewController(context: Context) -> UIImagePickerController {
+        let picker = UIImagePickerController()
+        picker.sourceType = .camera
+        picker.delegate = context.coordinator
+        return picker
+    }
+
+    func updateUIViewController(_ uiViewController: UIImagePickerController, context: Context) {}
+
+    class Coordinator: NSObject, UIImagePickerControllerDelegate, UINavigationControllerDelegate {
+        let onCapture: (UIImage) -> Void
+        let dismiss: DismissAction
+        init(onCapture: @escaping (UIImage) -> Void, dismiss: DismissAction) {
+            self.onCapture = onCapture
+            self.dismiss = dismiss
+        }
+        func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]) {
+            if let image = info[.originalImage] as? UIImage {
+                onCapture(image)
+            }
+            dismiss()
+        }
+        func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
+            dismiss()
+        }
     }
 }
 
