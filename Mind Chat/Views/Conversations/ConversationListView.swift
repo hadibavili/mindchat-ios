@@ -19,7 +19,7 @@ struct SidebarView: View {
     @State private var renamingConversation: Conversation?
     @State private var renameText = ""
 
-    private let maxRecentConversations = 20
+    private let maxRecentConversations = 10
 
     // MARK: - Filtering
 
@@ -96,9 +96,8 @@ struct SidebarView: View {
 
             ScrollView(showsIndicators: false) {
                 LazyVStack(spacing: 0) {
-                    newChatRow
-                    conversationsSection
                     memorySection
+                    conversationsSection
                 }
                 .padding(.bottom, 12)
             }
@@ -142,17 +141,6 @@ struct SidebarView: View {
                 .font(.system(size: 17, weight: .semibold))
                 .foregroundStyle(Color.mcTextPrimary)
             Spacer()
-            Button {
-                dismiss()
-                chatVM.newChat()
-            } label: {
-                Image(systemName: "square.and.pencil")
-                    .font(.system(size: 17))
-                    .foregroundStyle(Color.mcTextSecondary)
-                    .frame(width: 36, height: 36)
-                    .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
         }
         .padding(.horizontal, 16)
         .padding(.top, 56)
@@ -182,30 +170,6 @@ struct SidebarView: View {
         .padding(.vertical, 9)
         .background(Color.mcBgSecondary)
         .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-    }
-
-    // MARK: - New Chat Row
-
-    private var newChatRow: some View {
-        Button {
-            dismiss()
-            chatVM.newChat()
-        } label: {
-            HStack(spacing: 12) {
-                Image(systemName: "square.and.pencil")
-                    .font(.system(size: 15))
-                    .foregroundStyle(Color.mcTextSecondary)
-                    .frame(width: 22)
-                Text("New chat")
-                    .font(.system(size: 15))
-                    .foregroundStyle(Color.mcTextPrimary)
-                Spacer()
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 11)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(SidebarRowButtonStyle())
     }
 
     // MARK: - Recent Conversations Section
