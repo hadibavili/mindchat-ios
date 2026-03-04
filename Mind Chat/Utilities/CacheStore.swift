@@ -10,6 +10,7 @@ enum CacheKey {
     case topicDetail(id: String)
     case settings
     case usage
+    case suggestQuestions
 
     var rawKey: String {
         switch self {
@@ -19,17 +20,19 @@ enum CacheKey {
         case .topicDetail(let id):  return "topic_detail_\(id)"
         case .settings:             return "settings"
         case .usage:                return "usage"
+        case .suggestQuestions:     return "suggest_questions"
         }
     }
 
     var ttl: TimeInterval {
         switch self {
-        case .conversations:  return 1 * 24 * 60 * 60
-        case .topicsTree:     return 1 * 24 * 60 * 60
-        case .topicsStats:    return 1 * 24 * 60 * 60
-        case .topicDetail:    return 1 * 24 * 60 * 60
-        case .settings:       return 30 * 24 * 60 * 60
-        case .usage:          return 30 * 24 * 60 * 60
+        case .conversations:    return 1 * 24 * 60 * 60
+        case .topicsTree:       return 1 * 24 * 60 * 60
+        case .topicsStats:      return 1 * 24 * 60 * 60
+        case .topicDetail:      return 1 * 24 * 60 * 60
+        case .settings:         return 30 * 24 * 60 * 60
+        case .usage:            return 30 * 24 * 60 * 60
+        case .suggestQuestions: return 20 * 60
         }
     }
 
@@ -126,6 +129,8 @@ final class CacheStore {
             value = try? JSONDecoder.mindChat.decode(SettingsResponse.self, from: entry.data)
         case .usage:
             value = try? JSONDecoder.mindChat.decode(UsageResponse.self, from: entry.data)
+        case .suggestQuestions:
+            value = try? JSONDecoder.mindChat.decode([String].self, from: entry.data)
         }
         guard let v = value as? T else { return nil }
         // Promote to in-memory cache

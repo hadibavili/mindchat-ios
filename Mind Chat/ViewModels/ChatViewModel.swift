@@ -731,6 +731,13 @@ final class ChatViewModel: ObservableObject {
         guard smartSuggestions.isEmpty else { return }
         guard conversationId == nil, messages.isEmpty else { return }
 
+        // Return cached suggestions immediately if still valid (20-min TTL)
+        if let cached: [String] = CacheStore.shared.get(.suggestQuestions), !cached.isEmpty {
+            print("[SmartSuggestions] cache hit (\(cached.count) suggestions)")
+            smartSuggestions = cached
+            return
+        }
+
         suggestionsTask?.cancel()
         suggestionsTask = Task {
             let start = CFAbsoluteTimeGetCurrent()
@@ -743,6 +750,7 @@ final class ChatViewModel: ObservableObject {
                 print("[SmartSuggestions] fetched \(response.suggestions.count) suggestions in \(ms)ms")
                 guard !Task.isCancelled else { return }
                 if !response.suggestions.isEmpty {
+                    CacheStore.shared.set(.suggestQuestions, value: response.suggestions)
                     smartSuggestions = response.suggestions
                 }
             } catch {
