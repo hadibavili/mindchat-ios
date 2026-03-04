@@ -9,11 +9,37 @@ final class ConversationsViewModel: ObservableObject {
     @Published var conversations: [Conversation] = []
     @Published var isLoading = false
     @Published var errorMessage: String?
+    @Published private(set) var pinnedIds: Set<String> = []
 
     private let chat = ChatService.shared
     private var cancellables = Set<AnyCancellable>()
+    private let pinnedKey = "pinnedConversationIds"
+
+    var pinnedConversations: [Conversation] {
+        conversations.filter { pinnedIds.contains($0.id) }
+    }
+
+    var unpinnedConversations: [Conversation] {
+        conversations.filter { !pinnedIds.contains($0.id) }
+    }
+
+    func isPinned(_ conversation: Conversation) -> Bool {
+        pinnedIds.contains(conversation.id)
+    }
+
+    func togglePin(_ conversation: Conversation) {
+        if pinnedIds.contains(conversation.id) {
+            pinnedIds.remove(conversation.id)
+        } else {
+            pinnedIds.insert(conversation.id)
+        }
+        UserDefaults.standard.set(Array(pinnedIds), forKey: pinnedKey)
+    }
 
     init() {
+        if let saved = UserDefaults.standard.stringArray(forKey: pinnedKey) {
+            pinnedIds = Set(saved)
+        }
         EventBus.shared.events
             .receive(on: DispatchQueue.main)
             .sink { [weak self] event in
@@ -57,6 +83,10 @@ final class ConversationsViewModel: ObservableObject {
 
     func delete(conversation: Conversation) async {
         conversations.removeAll { $0.id == conversation.id }
+        if pinnedIds.contains(conversation.id) {
+            pinnedIds.remove(conversation.id)
+            UserDefaults.standard.set(Array(pinnedIds), forKey: pinnedKey)
+        }
         CacheStore.shared.invalidate(.conversations)
         do {
             try await chat.deleteConversation(id: conversation.id)

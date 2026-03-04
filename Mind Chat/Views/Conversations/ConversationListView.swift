@@ -20,6 +20,7 @@ struct SidebarView: View {
     @State private var renameText = ""
 
     private let maxRecentConversations = 10
+    private let maxRecentTopics = 20
 
     // MARK: - Filtering
 
@@ -31,7 +32,8 @@ struct SidebarView: View {
     }
 
     private var recentConversations: [Conversation] {
-        Array(filteredConversations.prefix(maxRecentConversations))
+        let unpinned = filteredConversations.filter { !conversationsVM.isPinned($0) }
+        return Array(unpinned.prefix(maxRecentConversations))
     }
 
     private var groupedConversations: [ConversationDateGroup] {
@@ -62,6 +64,10 @@ struct SidebarView: View {
     private var filteredTopics: [TopicTreeNode] {
         guard !searchText.isEmpty else { return topicsVm.rootTopics }
         return topicsVm.rootTopics.compactMap { filterNode($0, query: searchText) }
+    }
+
+    private var recentTopics: [TopicTreeNode] {
+        Array(filteredTopics.prefix(maxRecentTopics))
     }
 
     private func filterNode(_ node: TopicTreeNode, query: String) -> TopicTreeNode? {
@@ -180,7 +186,30 @@ struct SidebarView: View {
             ProgressView()
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 24)
-        } else if !filteredConversations.isEmpty {
+        } else if !filteredConversations.isEmpty || !conversationsVM.pinnedConversations.isEmpty {
+            let pinnedToShow = searchText.isEmpty
+                ? conversationsVM.pinnedConversations
+                : conversationsVM.pinnedConversations.filter {
+                    ($0.title ?? "").localizedCaseInsensitiveContains(searchText)
+                }
+
+            if !pinnedToShow.isEmpty {
+                HStack {
+                    Text("Pinned")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(Color.mcTextTertiary)
+                    Spacer()
+                }
+                .padding(.horizontal, 16)
+                .padding(.top, 16)
+                .padding(.bottom, 4)
+
+                ForEach(pinnedToShow) { conv in
+                    sidebarConversationRow(conv, isPinned: true)
+                        .id(conv.id + "-pinned")
+                }
+            }
+
             ForEach(groupedConversations, id: \.label) { group in
                 // Section header
                 HStack {
@@ -194,7 +223,8 @@ struct SidebarView: View {
                 .padding(.bottom, 4)
 
                 ForEach(group.conversations) { conv in
-                    sidebarConversationRow(conv)
+                    sidebarConversationRow(conv, isPinned: false)
+                        .id(conv.id + "-unpinned")
                 }
             }
 
@@ -224,18 +254,24 @@ struct SidebarView: View {
         }
     }
 
-    private func sidebarConversationRow(_ conv: Conversation) -> some View {
+    private func sidebarConversationRow(_ conv: Conversation, isPinned: Bool) -> some View {
         Button {
             dismiss()
             chatVM.newChat()
             Task { await chatVM.loadMessages(conversationId: conv.id) }
         } label: {
-            HStack {
+            HStack(spacing: 6) {
                 Text(conv.title ?? "New Chat")
                     .font(.system(size: 15))
                     .foregroundStyle(Color.mcTextPrimary)
                     .lineLimit(1)
                 Spacer()
+                if isPinned {
+                    Image(systemName: "pin.fill")
+                        .font(.caption2)
+                        .foregroundStyle(.orange)
+                        .rotationEffect(.degrees(45))
+                }
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 10)
@@ -243,6 +279,12 @@ struct SidebarView: View {
         }
         .buttonStyle(SidebarRowButtonStyle())
         .contextMenu {
+            Button {
+                conversationsVM.togglePin(conv)
+            } label: {
+                Label(isPinned ? "Unpin" : "Pin",
+                      systemImage: isPinned ? "pin.slash" : "pin")
+            }
             Button {
                 renamingConversation = conv
                 renameText = conv.title ?? ""
@@ -273,7 +315,7 @@ struct SidebarView: View {
                     .font(.system(size: 10, weight: .medium))
                     .foregroundStyle(Color.mcTextTertiary)
                 Spacer()
-                if memoryExpanded {
+                if memoryExpanded && filteredTopics.count > maxRecentTopics {
                     Button {
                         dismiss { showKnowledge = true }
                     } label: {
@@ -310,11 +352,28 @@ struct SidebarView: View {
                 .padding(.horizontal, 16)
                 .padding(.vertical, 10)
             } else {
-                ForEach(filteredTopics) { node in
+                ForEach(recentTopics) { node in
                     DrawerTopicNode(node: node, depth: 0) { selected in
                         showTopic = TopicNavTarget(id: selected.id, title: selected.name)
                         dismiss()
                     }
+                }
+
+                if filteredTopics.count > maxRecentTopics {
+                    Button {
+                        dismiss { showKnowledge = true }
+                    } label: {
+                        HStack {
+                            Spacer()
+                            Text("See all")
+                                .font(.system(size: 13, weight: .medium))
+                                .foregroundStyle(Color.mcTextLink)
+                            Spacer()
+                        }
+                        .padding(.vertical, 8)
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
                 }
             }
         }

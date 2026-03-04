@@ -27,7 +27,8 @@ struct ConversationHistoryView: View {
         let order = ["Today", "Yesterday", "Previous 7 Days", "Previous 30 Days", "Older"]
         var buckets: [String: [Conversation]] = [:]
 
-        for conv in filteredConversations {
+        let unpinned = filteredConversations.filter { !conversationsVM.isPinned($0) }
+        for conv in unpinned {
             let days = calendar.dateComponents([.day], from: conv.updatedAt, to: now).day ?? 0
             let key: String
             switch days {
@@ -114,6 +115,17 @@ struct ConversationHistoryView: View {
     private var conversationList: some View {
         List {
             if searchText.isEmpty {
+                if !conversationsVM.pinnedConversations.isEmpty {
+                    Section(header:
+                        Text("Pinned")
+                            .font(.caption.bold())
+                            .foregroundStyle(.secondary)
+                    ) {
+                        ForEach(conversationsVM.pinnedConversations) { conv in
+                            conversationRow(conv)
+                        }
+                    }
+                }
                 ForEach(groupedConversations, id: \.label) { group in
                     Section(header:
                         Text(group.label)
@@ -140,19 +152,37 @@ struct ConversationHistoryView: View {
         Button {
             onSelect(conv)
         } label: {
-            VStack(alignment: .leading, spacing: 3) {
-                Text(conv.title ?? "New Chat")
-                    .font(.subheadline)
-                    .foregroundStyle(Color.mcTextPrimary)
-                    .lineLimit(1)
-                Text(conv.updatedAt.relativeDisplay)
-                    .font(.caption)
-                    .foregroundStyle(Color.mcTextTertiary)
+            HStack(spacing: 8) {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(conv.title ?? "New Chat")
+                        .font(.subheadline)
+                        .foregroundStyle(Color.mcTextPrimary)
+                        .lineLimit(1)
+                    Text(conv.updatedAt.relativeDisplay)
+                        .font(.caption)
+                        .foregroundStyle(Color.mcTextTertiary)
+                }
+                Spacer()
+                if conversationsVM.isPinned(conv) {
+                    Image(systemName: "pin.fill")
+                        .font(.caption2)
+                        .foregroundStyle(.orange)
+                        .rotationEffect(.degrees(45))
+                }
             }
             .padding(.vertical, 2)
             .contentShape(Rectangle())
         }
         .buttonStyle(PressableButtonStyle())
+        .swipeActions(edge: .leading) {
+            Button {
+                conversationsVM.togglePin(conv)
+            } label: {
+                Label(conversationsVM.isPinned(conv) ? "Unpin" : "Pin",
+                      systemImage: conversationsVM.isPinned(conv) ? "pin.slash" : "pin")
+            }
+            .tint(.orange)
+        }
         .swipeActions(edge: .trailing, allowsFullSwipe: true) {
             Button(role: .destructive) {
                 Task { await conversationsVM.delete(conversation: conv) }
@@ -168,6 +198,12 @@ struct ConversationHistoryView: View {
             .tint(.blue)
         }
         .contextMenu {
+            Button {
+                conversationsVM.togglePin(conv)
+            } label: {
+                Label(conversationsVM.isPinned(conv) ? "Unpin" : "Pin",
+                      systemImage: conversationsVM.isPinned(conv) ? "pin.slash" : "pin")
+            }
             Button {
                 renamingConversation = conv
                 renameText = conv.title ?? ""
