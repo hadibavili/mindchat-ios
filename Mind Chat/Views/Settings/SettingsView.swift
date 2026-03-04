@@ -13,21 +13,8 @@ struct SettingsView: View {
         Form {
             GeneralSettingsSection(vm: vm, themeManager: themeManager)
             AIModelSection(vm: vm)
-
-            Section("Subscription") {
-                NavigationLink {
-                    SubscriptionView()
-                } label: {
-                    HStack {
-                        Text("Plan")
-                        Spacer()
-                        Text(vm.plan.label)
-                            .foregroundStyle(Color.planColor(vm.plan))
-                            .fontWeight(.semibold)
-                    }
-                }
-            }
-
+            subscriptionSection
+            dataSection
             AccountSection(appState: appState, showDeleteConfirm: $showDeleteConfirm)
         }
         .navigationTitle("Settings")
@@ -78,6 +65,34 @@ struct SettingsView: View {
             ConfirmDeleteAlert { confirmed in
                 deleteConfirmed = confirmed
                 showDeleteConfirm = false
+            }
+        }
+    }
+
+    // MARK: - Extracted Sections
+
+    private var subscriptionSection: some View {
+        Section("Subscription") {
+            NavigationLink {
+                SubscriptionView()
+            } label: {
+                HStack {
+                    Text("Plan")
+                    Spacer()
+                    Text(vm.plan.label)
+                        .foregroundStyle(Color.planColor(vm.plan))
+                        .fontWeight(.semibold)
+                }
+            }
+        }
+    }
+
+    private var dataSection: some View {
+        Section("Data") {
+            NavigationLink {
+                ImportMemoryView()
+            } label: {
+                Label("Import Memory", systemImage: "square.and.arrow.down")
             }
         }
     }

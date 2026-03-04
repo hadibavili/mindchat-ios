@@ -10,6 +10,7 @@ struct ChatInputView: View {
     @ObservedObject var vm: ChatViewModel
     @EnvironmentObject private var themeManager: ThemeManager
     @FocusState private var isInputFocused: Bool
+    @State private var preventFocusRestore = false
     @State private var selectedPhotoItems: [PhotosPickerItem] = []
     @State private var showPhotoPicker = false
     @State private var showDocumentPicker = false
@@ -212,11 +213,23 @@ struct ChatInputView: View {
         .animation(.mcSmooth, value: vm.isTranscribing)
         .animation(.mcSmooth, value: vm.isUploading)
         .animation(.mcSmooth, value: vm.attachments.count)
-        .onChange(of: vm.isStreaming) { _, _ in
-            // Dismiss keyboard on any streaming state change:
-            // • on start: user sent, hide keyboard immediately
-            // • on end: TextField re-enables, but focus is already false so keyboard won't reappear
+        .onChange(of: vm.isStreaming) { _, streaming in
             isInputFocused = false
+            if !streaming {
+                // Block any automatic focus restore for 400ms after streaming ends.
+                // iOS can restore focus to a TextField when it transitions from disabled → enabled.
+                // We intercept that in onChange(of: isInputFocused) below.
+                preventFocusRestore = true
+                Task {
+                    try? await Task.sleep(nanoseconds: 400_000_000)
+                    preventFocusRestore = false
+                }
+            }
+        }
+        .onChange(of: isInputFocused) { _, focused in
+            if focused && preventFocusRestore {
+                isInputFocused = false
+            }
         }
         .photosPicker(
             isPresented: $showPhotoPicker,

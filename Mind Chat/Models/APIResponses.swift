@@ -187,6 +187,27 @@ struct UsageLimits: Codable, Sendable {
     }
 }
 
+// MARK: - Import Memory
+
+struct ImportMemoryResponse: Codable, Sendable {
+    let topicsCreated: Int
+    let topicsUpdated: Int
+    let factsAdded: Int
+    let factsUpdated: Int
+    let topics: [ImportedTopic]
+
+    struct ImportedTopic: Codable, Sendable {
+        let path: String
+        let name: String
+        let isNew: Bool
+        let factsAdded: Int
+    }
+}
+
+struct ImportMemoryRequest: Encodable, Sendable {
+    let rawText: String
+}
+
 // MARK: - Upload & Transcribe
 
 struct UploadResponse: Codable, Sendable {
@@ -278,6 +299,12 @@ struct SuggestModelRequest: Encodable, Sendable {
 
 struct SuggestModelResponse: Decodable, Sendable {
     let category: QueryIntent?
+}
+
+// MARK: - Smart Suggestions
+
+struct SuggestQuestionsResponse: Decodable, Sendable {
+    let suggestions: [String]
 }
 
 // MARK: - Chat Request

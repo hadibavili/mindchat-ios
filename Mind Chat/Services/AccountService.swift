@@ -18,4 +18,10 @@ final class AccountService {
     func deleteAllData() async throws {
         let _: SuccessResponse = try await api.request("/api/account/delete-data", method: "DELETE")
     }
+
+    func importMemory(rawText: String) async throws -> ImportMemoryResponse {
+        try await api.request("/api/import-memory", method: "POST",
+                              body: ImportMemoryRequest(rawText: rawText),
+                              timeout: 180)
+    }
 }

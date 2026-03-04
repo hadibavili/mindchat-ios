@@ -8,22 +8,7 @@ struct EmptyStateView: View {
     @State private var greeting: String = ""
 
     private var suggestions: [String] {
-        switch vm.chatMemory {
-        case .alwaysPersist, .persistClearable:
-            return [
-                "What do you remember?",
-                "Summarize my topics",
-                "Help me reflect",
-                "What are my goals?"
-            ]
-        case .fresh, .extractOnly:
-            return [
-                "Think through a problem",
-                "Explain something simply",
-                "Give me creative ideas",
-                "What should I know?"
-            ]
-        }
+        vm.smartSuggestions
     }
 
     private func pickGreeting() -> String {
@@ -123,11 +108,13 @@ struct EmptyStateView: View {
             .opacity(appeared ? 1 : 0)
             .offset(y: appeared ? 0 : 8)
             .animation(.mcGentle.delay(0.1), value: appeared)
+            .animation(.mcGentle, value: vm.smartSuggestions)
             .padding(.bottom, 16)
         }
         .onAppear {
             greeting = pickGreeting()
             appeared = true
+            vm.loadSmartSuggestions()
         }
     }
 

@@ -13,6 +13,8 @@ struct ChatView: View {
     @State private var showRenameAlert    = false
     @State private var renameText         = ""
     @State private var atBottom           = true
+    @State private var isInteracting      = false
+    @State private var userScrolledUp     = false
     @State private var flatTopics: [TopicTreeNode] = []
     @Namespace private var bottomID
 
@@ -107,22 +109,44 @@ struct ChatView: View {
                     .animation(.mcGentle, value: vm.messages.count)
                 }
                 .scrollDismissesKeyboard(.interactively)
+                .onScrollPhaseChange { _, newPhase in
+                    isInteracting = (newPhase == .interacting)
+                }
                 .onScrollGeometryChange(for: Bool.self) { geo in
                     geo.contentOffset.y + geo.containerSize.height >= geo.contentSize.height - 50
                 } action: { _, isNearBottom in
                     atBottom = isNearBottom
+                    if isNearBottom {
+                        userScrolledUp = false          // User scrolled back to bottom
+                    } else if isInteracting {
+                        userScrolledUp = true           // User actively dragged away
+                    }
+                    // Content growth alone (isInteracting == false) does NOT set userScrolledUp
                 }
-                .onChange(of: vm.messages.count) { oldCount, _ in
-                    if oldCount == 0 || atBottom { scrollToBottom(proxy) }
+                .onChange(of: vm.messages.count) { _, _ in
+                    userScrolledUp = false
+                    scrollToBottom(proxy)
                 }
                 .onChange(of: vm.isStreaming) { _, streaming in
-                    if streaming && atBottom { scrollToBottom(proxy) }
+                    if streaming {
+                        userScrolledUp = false
+                        scrollToBottom(proxy)
+                    } else {
+                        // Streaming finished — always reveal the completed response
+                        Task {
+                            try? await Task.sleep(nanoseconds: 150_000_000) // ~150 ms for final layout
+                            userScrolledUp = false
+                            scrollToBottom(proxy)
+                        }
+                    }
                 }
                 // Keep view pinned to bottom while tokens arrive, without per-token onChange
                 .task(id: vm.isStreaming) {
                     guard vm.isStreaming else { return }
                     while !Task.isCancelled && vm.isStreaming {
-                        if atBottom { scrollToBottom(proxy) }
+                        if !userScrolledUp && !isInteracting {
+                            proxy.scrollTo(bottomID, anchor: .bottom) // no animation — instant, won't fight gesture
+                        }
                         try? await Task.sleep(nanoseconds: 100_000_000) // 100ms
                     }
                 }

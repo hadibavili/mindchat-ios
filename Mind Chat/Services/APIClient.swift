@@ -22,12 +22,14 @@ final class APIClient {
         _ path: String,
         method: String = "GET",
         body: Encodable? = nil,
-        headers: [String: String] = [:]
+        headers: [String: String] = [:],
+        timeout: TimeInterval? = nil
     ) async throws -> T {
         let url = try buildURL(path)
         var req = URLRequest(url: url)
         req.httpMethod = method
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        if let timeout { req.timeoutInterval = timeout }
 
         if let token = keychain.accessToken {
             req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")

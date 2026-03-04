@@ -37,6 +37,7 @@ final class ChatViewModel: ObservableObject {
     @Published var highlightMessageId: String?
     @Published var extractedTopics: [ExtractedTopic] = []
     @Published var topicFocus: TopicFocus?
+    @Published var smartSuggestions: [String] = []
 
     // MARK: - Question Form State
 
@@ -68,6 +69,7 @@ final class ChatViewModel: ObservableObject {
     // MARK: - Private
 
     private var streamTask: Task<Void, Never>?
+    private var suggestionsTask: Task<Void, Never>?
     private var recommendationTask: Task<Void, Never>?
     private var recordingTimer: Timer?
     private var cancellables = Set<AnyCancellable>()
@@ -626,6 +628,8 @@ final class ChatViewModel: ObservableObject {
         topicFocus        = nil
         formAnswers       = [:]
         submittedForms    = []
+        smartSuggestions   = []
+        suggestionsTask?.cancel()
     }
 
     // MARK: - Settings
@@ -719,6 +723,33 @@ final class ChatViewModel: ObservableObject {
 
     func useSuggestion(_ text: String) {
         inputText = text
+    }
+
+    // MARK: - Smart Suggestions
+
+    func loadSmartSuggestions() {
+        guard smartSuggestions.isEmpty else { return }
+        guard conversationId == nil, messages.isEmpty else { return }
+
+        suggestionsTask?.cancel()
+        suggestionsTask = Task {
+            let start = CFAbsoluteTimeGetCurrent()
+            do {
+                let response: SuggestQuestionsResponse = try await APIClient.shared.request(
+                    "/api/suggest-questions",
+                    timeout: 8
+                )
+                let ms = Int((CFAbsoluteTimeGetCurrent() - start) * 1000)
+                print("[SmartSuggestions] fetched \(response.suggestions.count) suggestions in \(ms)ms")
+                guard !Task.isCancelled else { return }
+                if !response.suggestions.isEmpty {
+                    smartSuggestions = response.suggestions
+                }
+            } catch {
+                let ms = Int((CFAbsoluteTimeGetCurrent() - start) * 1000)
+                print("[SmartSuggestions] failed after \(ms)ms: \(error)")
+            }
+        }
     }
 
     // MARK: - Question Form
