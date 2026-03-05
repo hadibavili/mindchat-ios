@@ -77,6 +77,8 @@ struct ChoiceFormView: View {
         } label: {
             Text(option)
                 .font(.subheadline)
+                .multilineTextAlignment(.leading)
+                .fixedSize(horizontal: false, vertical: true)
                 .foregroundStyle(isSelected ? .white : Color.mcTextPrimary)
                 .padding(.horizontal, 14)
                 .padding(.vertical, 10)
@@ -118,7 +120,10 @@ private struct FlowLayout: Layout {
         var maxX: CGFloat = 0
 
         for subview in subviews {
-            let size = subview.sizeThatFits(.unspecified)
+            let natural = subview.sizeThatFits(.unspecified)
+            let size = natural.width > width
+                ? subview.sizeThatFits(ProposedViewSize(width: width, height: nil))
+                : natural
             if x + size.width > width, x > 0 {
                 y += rowHeight + spacing
                 x = 0
@@ -136,9 +141,13 @@ private struct FlowLayout: Layout {
         var x = bounds.minX
         var y = bounds.minY
         var rowHeight: CGFloat = 0
+        let width = bounds.width
 
         for subview in subviews {
-            let size = subview.sizeThatFits(.unspecified)
+            let natural = subview.sizeThatFits(.unspecified)
+            let size = natural.width > width
+                ? subview.sizeThatFits(ProposedViewSize(width: width, height: nil))
+                : natural
             if x + size.width > bounds.maxX, x > bounds.minX {
                 y += rowHeight + spacing
                 x = bounds.minX
