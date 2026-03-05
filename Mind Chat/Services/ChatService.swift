@@ -48,8 +48,9 @@ final class ChatService {
     func messages(conversationId: String, highlight: String? = nil) async throws -> [ChatMessage] {
         var path = "/api/messages?conversationId=\(conversationId)"
         if let hl = highlight { path += "&highlight=\(hl)" }
-        let msgs: [CodableChatMessage] = try await api.request(path)
-        return msgs.map { $0.toChatMessage() }
+        struct Wrapper: Decodable { let data: [CodableChatMessage] }
+        let wrapped: Wrapper = try await api.request(path)
+        return wrapped.data.map { $0.toChatMessage() }
     }
 
     func clearMessages(conversationId: String) async throws {

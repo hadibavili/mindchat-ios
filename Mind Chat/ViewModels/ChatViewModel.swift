@@ -117,12 +117,17 @@ final class ChatViewModel: ObservableObject {
     // MARK: - Load Messages
 
     func loadMessages(conversationId: String? = nil, highlight: String? = nil) async {
-        guard let id = conversationId ?? self.conversationId else { return }
+        guard let id = conversationId ?? self.conversationId else {
+            print("[DEBUG] loadMessages — no conversationId, returning")
+            return
+        }
+        print("[DEBUG] loadMessages — loading conversation: \(id)")
         self.conversationId = id
         isLoading = true
         defer { isLoading = false }
         do {
             messages = try await chat.messages(conversationId: id, highlight: highlight)
+            print("[DEBUG] loadMessages — got \(messages.count) messages")
             // Auto-detect submitted question forms from history
             for (idx, msg) in messages.enumerated() {
                 guard msg.role == .assistant,
@@ -138,8 +143,10 @@ final class ChatViewModel: ObservableObject {
                 }
             }
         } catch let e as AppError {
+            print("[DEBUG] loadMessages — AppError: \(e.errorDescription ?? String(describing: e))")
             errorMessage = e.errorDescription
         } catch {
+            print("[DEBUG] loadMessages — Error: \(error)")
             errorMessage = error.localizedDescription
         }
     }
