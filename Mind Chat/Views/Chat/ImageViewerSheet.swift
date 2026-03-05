@@ -47,6 +47,7 @@ struct ImageViewerSheet: View {
                     .foregroundStyle(.white)
                     .padding()
             }
+            .accessibilityIdentifier("image.viewer.closeButton")
         }
         // Save / Share toolbar
         .overlay(alignment: .bottom) {

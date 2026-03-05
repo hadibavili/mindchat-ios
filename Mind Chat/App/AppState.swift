@@ -22,6 +22,10 @@ final class AppState: ObservableObject {
     private let auth = AuthService.shared
 
     init() {
+        if CommandLine.arguments.contains("--uitesting") {
+            isAuthenticated = true
+            return
+        }
         isAuthenticated = KeychainManager.shared.isAuthenticated
         // Restore persisted user on cold start (token exists but currentUser is nil).
         // Prefer @AppStorage values; fall back to JWT claims if storage is empty.

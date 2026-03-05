@@ -346,6 +346,7 @@ struct AttachmentGrid: View {
                         .frame(width: 220, height: 160)
                         .clipped()
                         .clipShape(RoundedRectangle(cornerRadius: 14))
+                        .accessibilityIdentifier("chat.message.imageThumbnail")
                         .onTapGesture { onImageTap(imageAttachments[0]) }
                 } else {
                     let cellSize: CGFloat = 108
@@ -359,6 +360,7 @@ struct AttachmentGrid: View {
                                 .frame(width: cellSize, height: cellSize)
                                 .clipped()
                                 .clipShape(RoundedRectangle(cornerRadius: 10))
+                                .accessibilityIdentifier("chat.message.imageThumbnail")
                                 .onTapGesture { onImageTap(att) }
                         }
                     }

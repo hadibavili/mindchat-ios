@@ -2,10 +2,19 @@ import Foundation
 import UIKit
 import AVFoundation
 
+// MARK: - Upload Service Protocol
+
+@MainActor
+protocol UploadServiceProtocol: AnyObject {
+    func upload(attachment: PendingAttachment) async throws -> UploadResponse
+    func upload(data: Data, name: String, mimeType: String) async throws -> UploadResponse
+    func transcribe(audioURL: URL) async throws -> String
+}
+
 // MARK: - Upload Service
 
 @MainActor
-final class UploadService {
+final class UploadService: UploadServiceProtocol {
 
     static let shared = UploadService()
     private let api = APIClient.shared

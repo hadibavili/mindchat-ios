@@ -1,9 +1,20 @@
 import Foundation
 
+// MARK: - Settings Service Protocol
+
+@MainActor
+protocol SettingsServiceProtocol: AnyObject {
+    func getCachedSettings() -> SettingsResponse?
+    func getCachedUsage() -> UsageResponse?
+    func getSettings() async throws -> SettingsResponse
+    func getUsage() async throws -> UsageResponse
+    func updateSettings(_ update: SettingsUpdateRequest) async throws
+}
+
 // MARK: - Settings Service
 
 @MainActor
-final class SettingsService {
+final class SettingsService: SettingsServiceProtocol {
 
     static let shared = SettingsService()
     private let api = APIClient.shared

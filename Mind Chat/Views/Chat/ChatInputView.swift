@@ -159,9 +159,11 @@ struct ChatInputView: View {
                                     Button { showCamera = true } label: {
                                         Label("Take Photo", systemImage: "camera")
                                     }
+                                    .accessibilityIdentifier("chat.input.cameraButton")
                                     Button { showPhotoPicker = true } label: {
                                         Label("Photos", systemImage: "photo")
                                     }
+                                    .accessibilityIdentifier("chat.input.photoLibraryButton")
                                     Button { showDocumentPicker = true } label: {
                                         Label("Files", systemImage: "doc")
                                     }
@@ -178,6 +180,7 @@ struct ChatInputView: View {
                                     .frame(width: 36, height: 36)
                                     .contentShape(Circle())
                             }
+                            .accessibilityIdentifier("chat.input.attachButton")
 
                             Spacer()
 

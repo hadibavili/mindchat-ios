@@ -6,11 +6,27 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXContainerItemProxy section */
+		AC0725EB2F59CAF900C520E2 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = AC4A00CA2F4E02F0006252FD /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = AC4A00D12F4E02F1006252FD;
+			remoteInfo = "Mind Chat";
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXFileReference section */
+		AC0725E72F59CAF900C520E2 /* ios-testing.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "ios-testing.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		AC4A00D22F4E02F1006252FD /* Mind Chat.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Mind Chat.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
+		AC0725E82F59CAF900C520E2 /* ios-testing */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = "ios-testing";
+			sourceTree = "<group>";
+		};
 		AC4A00D42F4E02F1006252FD /* Mind Chat */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = "Mind Chat";
@@ -19,6 +35,13 @@
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		AC0725E42F59CAF900C520E2 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		AC4A00CF2F4E02F1006252FD /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -33,6 +56,7 @@
 			isa = PBXGroup;
 			children = (
 				AC4A00D42F4E02F1006252FD /* Mind Chat */,
+				AC0725E82F59CAF900C520E2 /* ios-testing */,
 				AC4A00D32F4E02F1006252FD /* Products */,
 			);
 			sourceTree = "<group>";
@@ -41,6 +65,7 @@
 			isa = PBXGroup;
 			children = (
 				AC4A00D22F4E02F1006252FD /* Mind Chat.app */,
+				AC0725E72F59CAF900C520E2 /* ios-testing.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -48,6 +73,29 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		AC0725E62F59CAF900C520E2 /* ios-testing */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = AC0725EF2F59CAF900C520E2 /* Build configuration list for PBXNativeTarget "ios-testing" */;
+			buildPhases = (
+				AC0725E32F59CAF900C520E2 /* Sources */,
+				AC0725E42F59CAF900C520E2 /* Frameworks */,
+				AC0725E52F59CAF900C520E2 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				AC0725EC2F59CAF900C520E2 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				AC0725E82F59CAF900C520E2 /* ios-testing */,
+			);
+			name = "ios-testing";
+			packageProductDependencies = (
+			);
+			productName = "ios-testing";
+			productReference = AC0725E72F59CAF900C520E2 /* ios-testing.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 		AC4A00D12F4E02F1006252FD /* Mind Chat */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = AC4A00DD2F4E02F2006252FD /* Build configuration list for PBXNativeTarget "Mind Chat" */;
@@ -77,9 +125,13 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
-				LastSwiftUpdateCheck = 2620;
+				LastSwiftUpdateCheck = 2630;
 				LastUpgradeCheck = 2620;
 				TargetAttributes = {
+					AC0725E62F59CAF900C520E2 = {
+						CreatedOnToolsVersion = 26.3;
+						TestTargetID = AC4A00D12F4E02F1006252FD;
+					};
 					AC4A00D12F4E02F1006252FD = {
 						CreatedOnToolsVersion = 26.2;
 					};
@@ -100,11 +152,19 @@
 			projectRoot = "";
 			targets = (
 				AC4A00D12F4E02F1006252FD /* Mind Chat */,
+				AC0725E62F59CAF900C520E2 /* ios-testing */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		AC0725E52F59CAF900C520E2 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		AC4A00D02F4E02F1006252FD /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -115,6 +175,13 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		AC0725E32F59CAF900C520E2 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		AC4A00CE2F4E02F1006252FD /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -124,7 +191,57 @@
 		};
 /* End PBXSourcesBuildPhase section */
 
+/* Begin PBXTargetDependency section */
+		AC0725EC2F59CAF900C520E2 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = AC4A00D12F4E02F1006252FD /* Mind Chat */;
+			targetProxy = AC0725EB2F59CAF900C520E2 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
 /* Begin XCBuildConfiguration section */
+		AC0725ED2F59CAF900C520E2 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 7ZVTQ7KNK4;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.fenqor.ios-testing";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Mind Chat.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Mind Chat";
+			};
+			name = Debug;
+		};
+		AC0725EE2F59CAF900C520E2 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 7ZVTQ7KNK4;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.fenqor.ios-testing";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Mind Chat.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Mind Chat";
+			};
+			name = Release;
+		};
 		AC4A00DB2F4E02F2006252FD /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -319,6 +436,15 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		AC0725EF2F59CAF900C520E2 /* Build configuration list for PBXNativeTarget "ios-testing" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AC0725ED2F59CAF900C520E2 /* Debug */,
+				AC0725EE2F59CAF900C520E2 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		AC4A00CD2F4E02F0006252FD /* Build configuration list for PBXProject "Mind Chat" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
