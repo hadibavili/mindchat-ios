@@ -432,25 +432,17 @@ struct ChatInputView: View {
     // MARK: - Recording
 
     private func startRecording() {
-        print("[Voice] startRecording() called")
         let session = AVAudioSession.sharedInstance()
         AVAudioApplication.requestRecordPermission { granted in
             DispatchQueue.main.async {
-                guard granted else {
-                    print("[Voice] Microphone permission denied")
-                    return
-                }
-                print("[Voice] Microphone permission granted")
+                guard granted else { return }
                 do {
                     try session.setCategory(.record, mode: .default)
                     try session.setActive(true)
-                    print("[Voice] Audio session activated")
                 } catch {
-                    print("[Voice] Audio session setup failed: \(error)")
                     return
                 }
                 let url = FileManager.default.temporaryDirectory.appendingPathComponent("recording.m4a")
-                print("[Voice] Recording to: \(url.path)")
                 let settings: [String: Any] = [
                     AVFormatIDKey: Int(kAudioFormatMPEG4AAC),
                     AVSampleRateKey: 44100,
@@ -458,12 +450,10 @@ struct ChatInputView: View {
                     AVEncoderAudioQualityKey: AVAudioQuality.high.rawValue
                 ]
                 guard let recorder = try? AVAudioRecorder(url: url, settings: settings) else {
-                    print("[Voice] Failed to create AVAudioRecorder")
                     return
                 }
                 audioRecorder = recorder
-                let started = audioRecorder?.record() ?? false
-                print("[Voice] Recording started: \(started)")
+                audioRecorder?.record()
                 isRecording = true
                 duration    = 0
                 recordingTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { _ in
@@ -474,35 +464,20 @@ struct ChatInputView: View {
     }
 
     private func stopRecording() {
-        print("[Voice] stopRecording() called, duration=\(duration)")
         recordingTimer?.invalidate()
         audioRecorder?.stop()
         isRecording = false
         try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
-        guard let url = audioRecorder?.url else {
-            print("[Voice] No audio URL from recorder — aborting")
-            return
-        }
-        let fileExists = FileManager.default.fileExists(atPath: url.path)
-        let fileSize = (try? FileManager.default.attributesOfItem(atPath: url.path)[.size] as? Int) ?? 0
-        print("[Voice] Audio file exists=\(fileExists), size=\(fileSize) bytes, path=\(url.path)")
+        guard let url = audioRecorder?.url else { return }
         vm.isTranscribing = true
-        print("[Voice] Starting transcription request…")
         Task {
             do {
                 let text = try await UploadService.shared.transcribe(audioURL: url)
-                print("[Voice] Transcription succeeded, text length=\(text.count): \"\(text.prefix(100))\"")
-                if text.isEmpty {
-                    print("[Voice] WARNING: Server returned empty transcription text")
-                }
                 vm.inputText += text
-                print("[Voice] inputText after append (\(vm.inputText.count) chars): \"\(vm.inputText.prefix(100))\"")
             } catch {
-                print("[Voice] Transcription FAILED: \(error)")
                 vm.errorMessage = "Transcription failed. Please try again."
             }
             vm.isTranscribing = false
-            print("[Voice] isTranscribing set to false")
         }
     }
 }

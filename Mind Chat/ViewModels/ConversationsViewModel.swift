@@ -55,36 +55,29 @@ final class ConversationsViewModel: ObservableObject {
     func load() async {
         // Cache-first: return cached data immediately without showing spinner
         if let cached: [Conversation] = CacheStore.shared.get(.conversations) {
-            print("[ConversationsVM] load() — cache hit, \(cached.count) conversations")
             conversations = cached
             return
         }
-        print("[ConversationsVM] load() — cache miss, fetching from API…")
         isLoading = true
         defer { isLoading = false }
         do {
             let result = try await chat.conversations()
-            print("[ConversationsVM] load() — API returned \(result.count) conversations")
             conversations = result
             CacheStore.shared.set(.conversations, value: result)
         } catch let e as AppError {
-            print("[ConversationsVM] load() — AppError: \(e.errorDescription ?? String(describing: e))")
             errorMessage = e.errorDescription
         } catch {
-            print("[ConversationsVM] load() — Error: \(error)")
             errorMessage = error.localizedDescription
         }
     }
 
     func refresh() async {
-        print("[ConversationsVM] refresh() — fetching from API…")
         do {
             let result = try await chat.conversations()
-            print("[ConversationsVM] refresh() — API returned \(result.count) conversations")
             conversations = result
             CacheStore.shared.set(.conversations, value: result)
         } catch {
-            print("[ConversationsVM] refresh() — Error: \(error)")
+            // silently ignore refresh failures
         }
     }
 

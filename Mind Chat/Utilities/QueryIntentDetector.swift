@@ -57,7 +57,6 @@ enum QueryIntentDetector {
             )
             return response.category
         } catch {
-            print("[ModelRec] suggestModel failed: \(error)")
             return nil
         }
     }

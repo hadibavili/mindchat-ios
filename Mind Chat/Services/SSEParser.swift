@@ -17,20 +17,13 @@ struct SSEParser {
             // AsyncThrowingStream's closure runs outside any actor context.
             Task {
                 do {
-                    var lineCount = 0
                     for try await line in bytes.lines {
-                        lineCount += 1
-                        // Log every raw line (trim to 500 chars to capture long image URLs)
-                        let preview = line.count > 500 ? String(line.prefix(500)) + "…" : line
-                        print("[SSEParser] line \(lineCount): \(preview)")
-
                         guard line.hasPrefix("data:") else { continue }
 
                         let payload = String(line.dropFirst("data:".count))
                             .trimmingCharacters(in: .whitespaces)
 
                         if payload == "[DONE]" {
-                            print("[SSEParser] [DONE] received")
                             continuation.yield(.done)
                             continuation.finish()
                             return
@@ -39,15 +32,11 @@ struct SSEParser {
                         if let event = parseJSON(payload) {
                             continuation.yield(event)
                             if case .done = event {
-                                print("[SSEParser] done event parsed")
                                 continuation.finish()
                                 return
                             }
-                        } else {
-                            print("[SSEParser] WARNING — could not parse payload: \(payload.prefix(120))")
                         }
                     }
-                    print("[SSEParser] bytes.lines exhausted after \(lineCount) lines")
                     continuation.finish()
                 } catch {
                     continuation.finish(throwing: error)
@@ -122,7 +111,6 @@ struct SSEParser {
             return .error(msg)
 
         default:
-            print("[SSEParser] UNKNOWN event type: '\(type)' | full payload: \(raw)")
             return nil
         }
     }

@@ -61,7 +61,6 @@ struct EmailVerificationBanner: View {
             }
         } catch {
             sendError = true
-            print("[EmailVerificationBanner] resend error: \(error)")
         }
     }
 

@@ -89,10 +89,7 @@ final class APIClient {
         }
         req.httpBody = try JSONEncoder.mindChat.encode(body)
 
-        let sseConnectStart = Date()
-        print("[Timing] SSE → opening TCP connection to \(path)")
         let (bytes, response) = try await session.bytes(for: req)
-        print("[Timing] SSE → connection established in \(String(format: "%.0f", Date().timeIntervalSince(sseConnectStart) * 1000))ms")
         guard let http = response as? HTTPURLResponse else {
             throw AppError.networkError("Invalid response")
         }
@@ -146,15 +143,9 @@ final class APIClient {
                prefix.lowercased().hasPrefix("<!doctype") || prefix.lowercased().hasPrefix("<html") {
                 throw AppError.unauthorized
             }
-            // Log raw response for debugging
-            let rawPreview = String(data: data.prefix(500), encoding: .utf8) ?? "<non-utf8>"
-            print("[APIClient] Raw response (\(req.httpMethod ?? "?") \(req.url?.path ?? "?")): \(rawPreview)")
             do {
                 return try JSONDecoder.mindChat.decode(T.self, from: data)
             } catch {
-                let rawBody = String(data: data.prefix(2000), encoding: .utf8) ?? "<non-utf8>"
-                print("[APIClient] Decode error for \(T.self): \(error)")
-                print("[APIClient] Raw body: \(rawBody)")
                 throw AppError.decodingError(error.localizedDescription)
             }
         case 401:
@@ -178,9 +169,6 @@ final class APIClient {
             }
             throw AppError.serverError("Bad request")
         default:
-            let rawBody = String(data: data.prefix(2000), encoding: .utf8) ?? "<non-utf8>"
-            print("[APIClient] HTTP \(http.statusCode) for \(req.url?.path ?? "?")")
-            print("[APIClient] Response body: \(rawBody)")
             if let errResp = try? JSONDecoder.mindChat.decode(ErrorResponse.self, from: data) {
                 throw AppError.serverError(errResp.error)
             }

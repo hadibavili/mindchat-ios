@@ -118,10 +118,7 @@ struct ImageViewerSheet: View {
         } else {
             resolvedURLString = item.url
         }
-        guard let url = URL(string: resolvedURLString) else {
-            print("[ImageViewerSheet] invalid URL: \(item.url)")
-            return
-        }
+        guard let url = URL(string: resolvedURLString) else { return }
         var request = URLRequest(url: url)
         if let token = KeychainManager.shared.accessToken {
             request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
@@ -130,10 +127,8 @@ struct ImageViewerSheet: View {
               let http = response as? HTTPURLResponse,
               (200...299).contains(http.statusCode),
               let img = UIImage(data: data) else {
-            print("[ImageViewerSheet] failed to load image from \(item.url)")
             return
         }
-        print("[ImageViewerSheet] loaded \(data.count) bytes")
         displayImage = img
     }
 

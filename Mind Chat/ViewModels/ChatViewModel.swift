@@ -118,7 +118,6 @@ final class ChatViewModel: ObservableObject {
         $inputText
             .debounce(for: .milliseconds(600), scheduler: RunLoop.main)
             .sink { [weak self] text in
-                print("[ModelRec] debounce fired, text='\(text.prefix(40))'")
                 self?.updateModelRecommendation(for: text)
             }
             .store(in: &cancellables)
@@ -128,16 +127,13 @@ final class ChatViewModel: ObservableObject {
 
     func loadMessages(conversationId: String? = nil, highlight: String? = nil) async {
         guard let id = conversationId ?? self.conversationId else {
-            print("[DEBUG] loadMessages — no conversationId, returning")
             return
         }
-        print("[DEBUG] loadMessages — loading conversation: \(id)")
         self.conversationId = id
         isLoading = true
         defer { isLoading = false }
         do {
             messages = try await chat.messages(conversationId: id, highlight: highlight)
-            print("[DEBUG] loadMessages — got \(messages.count) messages")
             // Auto-detect submitted question forms from history
             for (idx, msg) in messages.enumerated() {
                 guard msg.role == .assistant,
@@ -153,10 +149,8 @@ final class ChatViewModel: ObservableObject {
                 }
             }
         } catch let e as AppError {
-            print("[DEBUG] loadMessages — AppError: \(e.errorDescription ?? String(describing: e))")
             errorMessage = e.errorDescription
         } catch {
-            print("[DEBUG] loadMessages — Error: \(error)")
             errorMessage = error.localizedDescription
         }
     }
@@ -166,8 +160,6 @@ final class ChatViewModel: ObservableObject {
     func send() async {
         Task { await NotificationManager.shared.requestPermissionIfNeeded() }
 
-        let sendStart = Date()
-        print("[Timing] ▶ send() called — T+0.000s")
         var text = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
         let pendingAttachments = attachments
         guard !text.isEmpty || !pendingAttachments.isEmpty else { return }
@@ -192,20 +184,16 @@ final class ChatViewModel: ObservableObject {
         // so the message only appears once we know uploads succeeded.
         var uploadedAttachments: [PendingAttachment] = []
         if !pendingAttachments.isEmpty {
-            print("[Send] Starting upload of \(pendingAttachments.count) attachment(s)")
             isUploading = true
             uploadProgress = (current: 0, total: pendingAttachments.count)
             var failedCount = 0
             for (index, var att) in pendingAttachments.enumerated() {
                 uploadProgress = (current: index + 1, total: pendingAttachments.count)
-                print("[Send] Uploading '\(att.name)' (\(att.mimeType ?? "unknown"), \(att.data?.count ?? 0) bytes)")
                 do {
                     let resp = try await upload.upload(attachment: att)
                     att.uploadedURL = resp.url
                     uploadedAttachments.append(att)
-                    print("[Send] Upload OK → \(resp.url)")
                 } catch {
-                    print("[Send] Upload FAILED for '\(att.name)': \(error)")
                     failedCount += 1
                 }
             }
@@ -218,7 +206,6 @@ final class ChatViewModel: ObservableObject {
                 errorMessage = "\(failedCount) file(s) failed to upload. Remove and retry."
                 return
             }
-            print("[Send] All uploads done, proceeding to chat")
         }
 
         thinkingStart = Date()
@@ -259,11 +246,8 @@ final class ChatViewModel: ObservableObject {
             return HistoryMessage(role: msg.role, content: msg.content)
         }
 
-        let capturedSendStart = sendStart
         streamTask = Task.detached(priority: .userInitiated) {
-            func elapsed() -> String { String(format: "%.3f", Date().timeIntervalSince(capturedSendStart)) }
             do {
-                print("[Timing] T+\(elapsed())s — calling chat.send() | provider=\(snapshotProvider.rawValue) model=\(snapshotModel)")
                 let stream = try await self.chat.send(
                     message: text,
                     conversationId: snapshotConvId,
@@ -273,24 +257,14 @@ final class ChatViewModel: ObservableObject {
                     attachments: uploadedAttachments,
                     topicId: currentTopicFocus?.id
                 )
-                print("[Timing] T+\(elapsed())s — stream returned (SSE connected), waiting for first event…")
-
                 var tokenBatch = ""
                 var lastFlush = Date()
-                var tokenCount = 0
-                var eventCount = 0
 
                 for try await event in stream {
-                    guard !Task.isCancelled else {
-                        print("[Timing] T+\(elapsed())s — task cancelled after \(eventCount) events, \(tokenCount) tokens")
-                        break
-                    }
-                    eventCount += 1
+                    guard !Task.isCancelled else { break }
 
                     if case .token(let t) = event {
                         tokenBatch += t
-                        tokenCount += 1
-                        if tokenCount == 1 { print("[Timing] T+\(elapsed())s — ★ FIRST TOKEN received") }
                         let now = Date()
                         if now.timeIntervalSince(lastFlush) >= 0.016 {
                             let batch = tokenBatch
@@ -309,7 +283,6 @@ final class ChatViewModel: ObservableObject {
                                 self.handle(event: .token(batch), assistantId: assistantId)
                             }
                         }
-                        print("[SSE] Non-token event: \(event)")
                         await MainActor.run {
                             self.handle(event: event, assistantId: assistantId)
                         }
@@ -323,13 +296,9 @@ final class ChatViewModel: ObservableObject {
                         self.handle(event: .token(batch), assistantId: assistantId)
                     }
                 }
-                print("[Timing] T+\(elapsed())s — stream exhausted | \(eventCount) events, \(tokenCount) tokens")
-
             } catch let e as AppError {
-                print("[Timing] T+\(elapsed())s — AppError: \(e.errorDescription ?? String(describing: e))")
                 await MainActor.run { self.finishStream(assistantId: assistantId, error: e.errorDescription) }
             } catch {
-                print("[Timing] T+\(elapsed())s — Error: \(error)")
                 await MainActor.run { self.finishStream(assistantId: assistantId, error: error.localizedDescription) }
             }
         }
@@ -351,9 +320,6 @@ final class ChatViewModel: ObservableObject {
         case .token(let token):
             thinkingStart = nil
             isSearching = false
-            if token.contains("![") || (token.contains("http") && (token.contains(".png") || token.contains(".jpg") || token.contains(".webp") || token.contains(".gif"))) {
-                print("[ChatViewModel] token may contain image URL: \(token)")
-            }
             appendToken(token, to: assistantId)
         case .searching:
             isInToolCallBlock = false   // tool call tokens have ended
@@ -374,12 +340,10 @@ final class ChatViewModel: ObservableObject {
             }
             eventBus.publish(.topicsUpdated)
         case .generatingImage:
-            print("[ChatViewModel] generating_image event — image is being created")
             isInToolCallBlock = false   // tool call tokens have ended
             isGeneratingImage = true
 
         case .imageGenerated(let url, let name):
-            print("[ChatViewModel] imageGenerated event | url='\(url)' | name='\(name ?? "nil")'")
             isGeneratingImage = false
             let att = MessageAttachment(
                 id: UUID().uuidString,
@@ -398,7 +362,6 @@ final class ChatViewModel: ObservableObject {
             downloadAndCacheImage(url: url, forId: attId)
 
         case .streamEnd:
-            print("[ChatViewModel] stream_end event — text stream finished")
             isStreaming = false
         case .error(let msg):
             finishStream(assistantId: assistantId, error: msg)
@@ -494,34 +457,23 @@ final class ChatViewModel: ObservableObject {
         Task {
             // L2: disk cache hit — skip network entirely
             if let cached = ImageDiskCache.shared.read(for: url) {
-                print("[ChatViewModel] disk cache hit for id=\(id)")
                 await MainActor.run { cacheImage(cached, forId: id) }
                 return
             }
 
-            guard let imageURL = URL(string: resolvedURL) else {
-                print("[ChatViewModel] invalid generated image URL: \(resolvedURL)")
-                return
-            }
+            guard let imageURL = URL(string: resolvedURL) else { return }
             var request = URLRequest(url: imageURL)
             if let token = KeychainManager.shared.accessToken {
                 request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
             }
             do {
-                let (data, response) = try await URLSession.shared.data(for: request)
-                if let http = response as? HTTPURLResponse {
-                    print("[ChatViewModel] image download status: \(http.statusCode) (\(data.count) bytes)")
-                }
-                guard let image = UIImage(data: data) else {
-                    print("[ChatViewModel] could not decode image data (\(data.count) bytes)")
-                    return
-                }
+                let (data, _) = try await URLSession.shared.data(for: request)
+                guard let image = UIImage(data: data) else { return }
                 // Write to disk (L2) then populate memory (L1)
                 ImageDiskCache.shared.write(image, for: url)
-                print("[ChatViewModel] image cached to disk for id=\(id)")
                 await MainActor.run { cacheImage(image, forId: id) }
             } catch {
-                print("[ChatViewModel] image download failed: \(error)")
+                // silently ignore image download failures
             }
         }
     }
@@ -576,7 +528,7 @@ final class ChatViewModel: ObservableObject {
                 messages = try await chat.messages(conversationId: convId, highlight: nil)
                 ToastManager.shared.info("Response loaded from server")
             } catch {
-                print("[Background] Failed to recover messages: \(error)")
+                // silently ignore background recovery failures
             }
         }
     }
@@ -678,14 +630,14 @@ final class ChatViewModel: ObservableObject {
             plan                 = s.plan
             showMemoryIndicators = s.showMemoryIndicators
         } catch {
-            print("[ChatViewModel] loadSettings failed: \(error)")
+            // silently ignore settings load failures (cached values remain in use)
         }
         do {
             let usage = try await settings.getUsage()
             voiceEnabled         = usage.limits.voice
             imageUploadsEnabled  = usage.limits.imageUploads
         } catch {
-            print("[ChatViewModel] getUsage failed: \(error)")
+            // silently ignore usage load failures
         }
         updateModelRecommendation(for: inputText)
     }
@@ -720,7 +672,6 @@ final class ChatViewModel: ObservableObject {
             }
 
             guard !Task.isCancelled else { return }
-            print("[ModelRec] intent=\(intent?.rawValue ?? "nil") plan=\(snapshotPlan.rawValue) provider=\(snapshotProvider.rawValue) → rec=\(rec?.modelId ?? "nil")")
             if rec != modelRecommendation { modelRecommendation = rec }
         }
     }
@@ -746,29 +697,24 @@ final class ChatViewModel: ObservableObject {
 
         // Return cached suggestions immediately if still valid (20-min TTL)
         if let cached: [String] = CacheStore.shared.get(.suggestQuestions), !cached.isEmpty {
-            print("[SmartSuggestions] cache hit (\(cached.count) suggestions)")
             smartSuggestions = cached
             return
         }
 
         suggestionsTask?.cancel()
         suggestionsTask = Task {
-            let start = CFAbsoluteTimeGetCurrent()
             do {
                 let response: SuggestQuestionsResponse = try await APIClient.shared.request(
                     "/api/suggest-questions",
                     timeout: 8
                 )
-                let ms = Int((CFAbsoluteTimeGetCurrent() - start) * 1000)
-                print("[SmartSuggestions] fetched \(response.suggestions.count) suggestions in \(ms)ms")
                 guard !Task.isCancelled else { return }
                 if !response.suggestions.isEmpty {
                     CacheStore.shared.set(.suggestQuestions, value: response.suggestions)
                     smartSuggestions = response.suggestions
                 }
             } catch {
-                let ms = Int((CFAbsoluteTimeGetCurrent() - start) * 1000)
-                print("[SmartSuggestions] failed after \(ms)ms: \(error)")
+                // silently ignore suggestion fetch failures
             }
         }
     }

@@ -73,11 +73,8 @@ final class ImportMemoryViewModel: ObservableObject {
         guard canImport else { return }
         isImporting = true
         errorMessage = nil
-        let start = Date()
-        print("[ImportMemory] Starting import, text length: \(pastedText.count)")
         do {
             let response = try await AccountService.shared.importMemory(rawText: pastedText)
-            print("[ImportMemory] Success in \(String(format: "%.1f", Date().timeIntervalSince(start)))s — topics: \(response.topicsCreated) created, facts: \(response.factsAdded) added")
             importResult = response
             isSuccess = true
             isImporting = false
@@ -85,7 +82,6 @@ final class ImportMemoryViewModel: ObservableObject {
             EventBus.shared.publish(.topicsUpdated)
             EventBus.shared.publish(.factsUpdated)
         } catch {
-            print("[ImportMemory] Failed in \(String(format: "%.1f", Date().timeIntervalSince(start)))s — error: \(error)")
             if let appError = error as? AppError {
                 errorMessage = appError.errorDescription ?? "Import failed. Please try again."
             } else {
