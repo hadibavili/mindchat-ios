@@ -76,13 +76,22 @@ final class ChatViewModel: ObservableObject {
     /// True while the model is actively streaming a tool call block; suppresses those tokens from the UI.
     private var isInToolCallBlock = false
 
-    private let chat     = ChatService.shared
+    private let chat:     any ChatServiceProtocol
+    private let settings: any SettingsServiceProtocol
     private let upload   = UploadService.shared
     private let eventBus = EventBus.shared
 
     // MARK: - Init
 
-    init() {
+    /// Production init — uses shared singletons.
+    convenience init() {
+        self.init(chat: ChatService.shared, settings: SettingsService.shared)
+    }
+
+    /// Testable init — accepts injected dependencies.
+    init(chat: any ChatServiceProtocol, settings: any SettingsServiceProtocol) {
+        self.chat = chat
+        self.settings = settings
         EventBus.shared.events
             .receive(on: RunLoop.main)
             .sink { [weak self] event in
@@ -563,7 +572,7 @@ final class ChatViewModel: ObservableObject {
 
         Task {
             do {
-                messages = try await chat.messages(conversationId: convId)
+                messages = try await chat.messages(conversationId: convId, highlight: nil)
                 ToastManager.shared.info("Response loaded from server")
             } catch {
                 print("[Background] Failed to recover messages: \(error)")
@@ -642,12 +651,10 @@ final class ChatViewModel: ObservableObject {
     // MARK: - Settings
 
     func loadSettings() async {
-        let service = SettingsService.shared
-
         // Phase 1: populate from disk cache synchronously (before first await)
         // This runs instantly on cold launch, showing the correct plan/model/limits
         // with zero network latency.
-        if let cached = service.getCachedSettings() {
+        if let cached = settings.getCachedSettings() {
             provider             = cached.provider
             model                = cached.model
             chatMemory           = cached.chatMemory
@@ -655,14 +662,14 @@ final class ChatViewModel: ObservableObject {
             plan                 = cached.plan
             showMemoryIndicators = cached.showMemoryIndicators
         }
-        if let cachedUsage = service.getCachedUsage() {
+        if let cachedUsage = settings.getCachedUsage() {
             voiceEnabled        = cachedUsage.limits.voice
             imageUploadsEnabled = cachedUsage.limits.imageUploads
         }
 
         // Phase 2: fetch fresh from server and update cache + UI in background
         do {
-            let s = try await service.getSettings()
+            let s = try await settings.getSettings()
             provider             = s.provider
             model                = s.model
             chatMemory           = s.chatMemory
@@ -673,7 +680,7 @@ final class ChatViewModel: ObservableObject {
             print("[ChatViewModel] loadSettings failed: \(error)")
         }
         do {
-            let usage = try await service.getUsage()
+            let usage = try await settings.getUsage()
             voiceEnabled         = usage.limits.voice
             imageUploadsEnabled  = usage.limits.imageUploads
         } catch {
@@ -721,9 +728,7 @@ final class ChatViewModel: ObservableObject {
 
     func updatePersona(_ p: PersonaType) async {
         persona = p
-        try? await SettingsService.shared.updateSettings(
-            SettingsUpdateRequest(persona: p)
-        )
+        try? await settings.updateSettings(SettingsUpdateRequest(persona: p))
     }
 
     // MARK: - Suggestion

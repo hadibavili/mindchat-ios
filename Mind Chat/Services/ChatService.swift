@@ -1,9 +1,26 @@
 import Foundation
 
+// MARK: - Chat Service Protocol
+
+@MainActor
+protocol ChatServiceProtocol: AnyObject {
+    func send(
+        message: String,
+        conversationId: String?,
+        provider: AIProvider,
+        model: String,
+        history: [HistoryMessage],
+        attachments: [PendingAttachment],
+        topicId: String?
+    ) async throws -> AsyncThrowingStream<SSEEvent, Error>
+    func messages(conversationId: String, highlight: String?) async throws -> [ChatMessage]
+    func clearMessages(conversationId: String) async throws
+}
+
 // MARK: - Chat Service
 
 @MainActor
-final class ChatService {
+final class ChatService: ChatServiceProtocol {
 
     static let shared = ChatService()
     private let api = APIClient.shared
