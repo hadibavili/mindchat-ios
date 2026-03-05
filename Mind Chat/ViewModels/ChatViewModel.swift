@@ -78,7 +78,7 @@ final class ChatViewModel: ObservableObject {
 
     private let chat:     any ChatServiceProtocol
     private let settings: any SettingsServiceProtocol
-    private let upload   = UploadService.shared
+    private let upload:   any UploadServiceProtocol
     private let eventBus = EventBus.shared
 
     // MARK: - Init
@@ -89,9 +89,10 @@ final class ChatViewModel: ObservableObject {
     }
 
     /// Testable init — accepts injected dependencies.
-    init(chat: any ChatServiceProtocol, settings: any SettingsServiceProtocol) {
+    init(chat: any ChatServiceProtocol, settings: any SettingsServiceProtocol, upload: any UploadServiceProtocol = UploadService.shared) {
         self.chat = chat
         self.settings = settings
+        self.upload = upload
         EventBus.shared.events
             .receive(on: RunLoop.main)
             .sink { [weak self] event in
