@@ -62,7 +62,9 @@ final class ChatService {
     // MARK: - Conversations
 
     func conversations() async throws -> [Conversation] {
-        return try await api.request("/api/conversations")
+        struct Wrapper: Decodable { let data: [Conversation] }
+        let wrapped: Wrapper = try await api.request("/api/conversations")
+        return wrapped.data
     }
 
     func createConversation(title: String? = nil) async throws -> String {

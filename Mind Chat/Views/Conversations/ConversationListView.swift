@@ -182,6 +182,7 @@ struct SidebarView: View {
 
     @ViewBuilder
     private var conversationsSection: some View {
+        let _ = print("[SidebarView] conversationsSection render — total: \(conversationsVM.conversations.count), filtered: \(filteredConversations.count), pinned: \(conversationsVM.pinnedConversations.count), isLoading: \(conversationsVM.isLoading), grouped: \(groupedConversations.map { "\($0.label):\($0.conversations.count)" })")
         if conversationsVM.isLoading && conversationsVM.conversations.isEmpty {
             ProgressView()
                 .frame(maxWidth: .infinity)
