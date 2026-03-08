@@ -1,9 +1,17 @@
 import Foundation
 
+// MARK: - Topic Service Protocol
+
+@MainActor
+protocol TopicServiceProtocol: AnyObject {
+    func topicsTree() async throws -> [TopicTreeNode]
+    func stats() async throws -> TopicStatsResponse
+}
+
 // MARK: - Topic Service
 
 @MainActor
-final class TopicService {
+final class TopicService: TopicServiceProtocol {
 
     static let shared = TopicService()
     private let api = APIClient.shared
@@ -13,7 +21,9 @@ final class TopicService {
     // MARK: - Tree
 
     func topicsTree() async throws -> [TopicTreeNode] {
-        return try await api.request("/api/topics")
+        struct Response: Decodable { let data: [TopicTreeNode] }
+        let result: Response = try await api.request("/api/topics")
+        return result.data
     }
 
     // MARK: - Topic Detail

@@ -11,10 +11,11 @@ final class TopicsViewModel: ObservableObject {
     @Published var isLoading = false
     @Published var errorMessage: String?
 
-    private let topicService = TopicService.shared
+    private let topicService: TopicServiceProtocol
     private var cancellables = Set<AnyCancellable>()
 
-    init() {
+    init(topicService: TopicServiceProtocol = TopicService.shared) {
+        self.topicService = topicService
         EventBus.shared.events
             .receive(on: DispatchQueue.main)
             .sink { [weak self] event in
