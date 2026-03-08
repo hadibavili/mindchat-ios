@@ -297,8 +297,18 @@ final class ChatViewModel: ObservableObject {
                     }
                 }
             } catch let e as AppError {
+                ErrorReporter.shared.reportStreamFailure(
+                    message: "Chat stream failed: \(e.errorDescription ?? "unknown")",
+                    conversationId: snapshotConvId,
+                    model: snapshotModel
+                )
                 await MainActor.run { self.finishStream(assistantId: assistantId, error: e.errorDescription) }
             } catch {
+                ErrorReporter.shared.reportStreamFailure(
+                    message: "Chat stream failed: \(error.localizedDescription)",
+                    conversationId: snapshotConvId,
+                    model: snapshotModel
+                )
                 await MainActor.run { self.finishStream(assistantId: assistantId, error: error.localizedDescription) }
             }
         }

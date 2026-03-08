@@ -7,6 +7,10 @@ struct Mind_ChatApp: App {
     @StateObject private var themeManager = ThemeManager()
     @Environment(\.scenePhase) private var scenePhase
 
+    init() {
+        setupCrashReporting()
+    }
+
     var body: some Scene {
         WindowGroup {
             ContentView()
@@ -44,6 +48,17 @@ struct Mind_ChatApp: App {
             default:
                 break
             }
+        }
+    }
+
+    // MARK: - Crash Reporting
+
+    private func setupCrashReporting() {
+        NSSetUncaughtExceptionHandler { exception in
+            ErrorReporter.shared.reportCrash(
+                message: exception.reason ?? "Uncaught exception: \(exception.name.rawValue)",
+                stackTrace: exception.callStackSymbols.joined(separator: "\n")
+            )
         }
     }
 }

@@ -89,11 +89,20 @@ final class APIClient {
         }
         req.httpBody = try JSONEncoder.mindChat.encode(body)
 
-        let (bytes, response) = try await session.bytes(for: req)
+        let bytes: URLSession.AsyncBytes
+        let response: URLResponse
+        do {
+            (bytes, response) = try await session.bytes(for: req)
+        } catch {
+            ErrorReporter.shared.reportNetworkError(endpoint: path, error: error)
+            throw AppError.networkError(error.localizedDescription)
+        }
+
         guard let http = response as? HTTPURLResponse else {
             throw AppError.networkError("Invalid response")
         }
         guard (200...299).contains(http.statusCode) else {
+            ErrorReporter.shared.reportAPIError(endpoint: path, statusCode: http.statusCode)
             switch http.statusCode {
             case 401: throw AppError.unauthorized
             case 403: throw AppError.forbidden
@@ -126,7 +135,20 @@ final class APIClient {
     // MARK: - Private
 
     private func perform<T: Decodable>(_ req: URLRequest) async throws -> T {
-        let (data, response) = try await session.data(for: req)
+        let endpoint = req.url?.path ?? "unknown"
+        let data: Data
+        let response: URLResponse
+
+        do {
+            (data, response) = try await session.data(for: req)
+        } catch {
+            // Don't report errors for the error-reports endpoint itself
+            if !endpoint.contains("error-reports") {
+                ErrorReporter.shared.reportNetworkError(endpoint: endpoint, error: error)
+            }
+            throw AppError.networkError(error.localizedDescription)
+        }
+
         guard let http = response as? HTTPURLResponse else {
             throw AppError.networkError("Invalid response")
         }
@@ -164,11 +186,23 @@ final class APIClient {
         case 429:
             throw AppError.rateLimited
         case 400:
+            let responseStr = String(data: data, encoding: .utf8)
+            if !endpoint.contains("error-reports") {
+                ErrorReporter.shared.reportAPIError(
+                    endpoint: endpoint, statusCode: 400, responseBody: responseStr
+                )
+            }
             if let errResp = try? JSONDecoder.mindChat.decode(ErrorResponse.self, from: data) {
                 throw AppError.serverError(errResp.error)
             }
             throw AppError.serverError("Bad request")
         default:
+            let responseStr = String(data: data, encoding: .utf8)
+            if !endpoint.contains("error-reports") {
+                ErrorReporter.shared.reportAPIError(
+                    endpoint: endpoint, statusCode: http.statusCode, responseBody: responseStr
+                )
+            }
             if let errResp = try? JSONDecoder.mindChat.decode(ErrorResponse.self, from: data) {
                 throw AppError.serverError(errResp.error)
             }
