@@ -12,8 +12,12 @@ final class SearchViewModel: ObservableObject {
     @Published var selectedType: FactType? = nil
     @Published var errorMessage: String?
 
-    private let service = TopicService.shared
+    private let service: TopicServiceProtocol
     private var searchTask: Task<Void, Never>?
+
+    init(service: TopicServiceProtocol = TopicService.shared) {
+        self.service = service
+    }
 
     // MARK: - Search (debounced via onChange)
 
@@ -36,7 +40,7 @@ final class SearchViewModel: ObservableObject {
         isLoading = true
         defer { isLoading = false }
         do {
-            results = try await service.search(query: q, type: selectedType)
+            results = try await service.search(query: q, type: selectedType, importance: nil)
         } catch let e as AppError {
             errorMessage = e.errorDescription
         } catch {

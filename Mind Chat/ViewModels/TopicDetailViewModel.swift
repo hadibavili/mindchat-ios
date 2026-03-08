@@ -17,11 +17,12 @@ final class TopicDetailViewModel: ObservableObject {
     @Published var selectedImportance: FactImportance? = nil
 
     private let topicId: String
-    private let service = TopicService.shared
+    private let service: TopicServiceProtocol
     private var cancellables = Set<AnyCancellable>()
 
-    init(topicId: String) {
+    init(topicId: String, service: TopicServiceProtocol = TopicService.shared) {
         self.topicId = topicId
+        self.service = service
         EventBus.shared.events
             .receive(on: DispatchQueue.main)
             .sink { [weak self] event in
@@ -104,7 +105,7 @@ final class TopicDetailViewModel: ObservableObject {
         facts[idx].pinned = !current   // Optimistic
 
         do {
-            let updated = try await service.updateFact(id: factId, pinned: !current)
+            let updated = try await service.updateFact(id: factId, content: nil, pinned: !current, confidence: nil)
             facts[idx] = updated
             CacheStore.shared.invalidate(.topicDetail(id: topicId))
             EventBus.shared.publish(.factsUpdated)
@@ -120,7 +121,7 @@ final class TopicDetailViewModel: ObservableObject {
         facts[idx].content = content  // Optimistic
 
         do {
-            let updated = try await service.updateFact(id: factId, content: content)
+            let updated = try await service.updateFact(id: factId, content: content, pinned: nil, confidence: nil)
             facts[idx] = updated
             CacheStore.shared.invalidate(.topicDetail(id: topicId))
             EventBus.shared.publish(.factsUpdated)

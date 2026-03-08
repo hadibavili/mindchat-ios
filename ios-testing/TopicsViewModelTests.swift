@@ -12,7 +12,6 @@ final class TopicsViewModelTests: XCTestCase {
     override func setUp() async throws {
         mockService = MockTopicService()
         sut = TopicsViewModel(topicService: mockService)
-        // Clear cache so tests don't bleed into each other
         CacheStore.shared.invalidate(.topicsTree)
         CacheStore.shared.invalidate(.topicsStats)
     }
@@ -80,6 +79,39 @@ final class TopicsViewModelTests: XCTestCase {
         XCTAssertFalse(sut.isLoading)
     }
 
+    func test_load_populatesStatsFromService() async {
+        mockService.stubbedStats = MockTopicService.makeStats(totalTopics: 10, totalFacts: 50)
+
+        await sut.load()
+
+        XCTAssertNotNil(sut.stats)
+        XCTAssertEqual(sut.stats?.totalTopics, 10)
+        XCTAssertEqual(sut.stats?.totalFacts, 50)
+    }
+
+    func test_load_usesBothCaches_doesNotCallEitherService() async {
+        let cachedTree = [MockTopicService.makeNode(id: "c1")]
+        let cachedStats = MockTopicService.makeStats(totalTopics: 3, totalFacts: 9)
+        CacheStore.shared.set(.topicsTree, value: cachedTree)
+        CacheStore.shared.set(.topicsStats, value: cachedStats)
+
+        await sut.load()
+
+        XCTAssertEqual(mockService.topicsTreeCallCount, 0)
+        XCTAssertEqual(mockService.statsCallCount, 0)
+        XCTAssertEqual(sut.rootTopics.count, 1)
+    }
+
+    func test_load_statsFailure_stillPopulatesTree() async {
+        mockService.stubbedTree = [MockTopicService.makeNode(id: "1")]
+        mockService.stubbedStatsError = AppError.serverError("stats down")
+
+        await sut.load()
+
+        XCTAssertEqual(sut.rootTopics.count, 1)
+        XCTAssertNil(sut.stats)
+    }
+
     // MARK: - refresh()
 
     func test_refresh_alwaysCallsService() async {
@@ -97,6 +129,38 @@ final class TopicsViewModelTests: XCTestCase {
         await sut.refresh()
 
         XCTAssertEqual(sut.rootTopics.first?.id, "fresh")
+    }
+
+    func test_refresh_alsoRefreshesStats() async {
+        mockService.stubbedStats = MockTopicService.makeStats(totalTopics: 20, totalFacts: 100)
+
+        await sut.refresh()
+
+        XCTAssertEqual(mockService.statsCallCount, 1)
+        XCTAssertEqual(sut.stats?.totalTopics, 20)
+    }
+
+    func test_refresh_errorOnTree_setsErrorMessage() async {
+        mockService.stubbedTreeError = AppError.serverError("refresh failed")
+
+        await sut.refresh()
+
+        XCTAssertNotNil(sut.errorMessage)
+    }
+
+    func test_refresh_errorOnTree_doesNotClearExistingTopics() async {
+        // First, load successfully
+        mockService.stubbedTree = [MockTopicService.makeNode(id: "1", name: "Original")]
+        await sut.refresh()
+        XCTAssertEqual(sut.rootTopics.count, 1)
+
+        // Now refresh fails
+        mockService.stubbedTreeError = AppError.serverError("boom")
+        await sut.refresh()
+
+        // Original topics should survive
+        XCTAssertEqual(sut.rootTopics.count, 1)
+        XCTAssertEqual(sut.rootTopics.first?.name, "Original")
     }
 
     // MARK: - Computed properties
@@ -142,5 +206,36 @@ final class TopicsViewModelTests: XCTestCase {
         await sut.refresh()
 
         XCTAssertEqual(sut.totalTopics, 3)
+    }
+
+    func test_totalFacts_zeroWhenEmpty() async {
+        mockService.stubbedStatsError = AppError.serverError("nope")
+        mockService.stubbedTree = []
+
+        await sut.refresh()
+
+        XCTAssertEqual(sut.totalFacts, 0)
+    }
+
+    func test_totalTopics_zeroWhenEmpty() async {
+        mockService.stubbedStatsError = AppError.serverError("nope")
+        mockService.stubbedTree = []
+
+        await sut.refresh()
+
+        XCTAssertEqual(sut.totalTopics, 0)
+    }
+
+    func test_totalFacts_sumsRecursiveChildFactCounts() async {
+        mockService.stubbedStatsError = AppError.serverError("nope")
+        let grandchild = MockTopicService.makeNode(id: "gc", factCount: 4)
+        let child = MockTopicService.makeNode(id: "c", factCount: 2, children: [grandchild])
+        let root = MockTopicService.makeNode(id: "r", factCount: 1, children: [child])
+        mockService.stubbedTree = [root]
+
+        await sut.refresh()
+
+        // 1 + 2 + 4 = 7
+        XCTAssertEqual(sut.totalFacts, 7)
     }
 }

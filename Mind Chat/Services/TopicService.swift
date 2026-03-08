@@ -6,6 +6,11 @@ import Foundation
 protocol TopicServiceProtocol: AnyObject {
     func topicsTree() async throws -> [TopicTreeNode]
     func stats() async throws -> TopicStatsResponse
+    func topicDetail(id: String) async throws -> TopicDetailResponse
+    func search(query: String, type: FactType?, importance: FactImportance?) async throws -> [SearchResult]
+    func merge(sourceId: String, targetId: String) async throws
+    func updateFact(id: String, content: String?, pinned: Bool?, confidence: Double?) async throws -> Fact
+    func deleteFact(id: String) async throws
 }
 
 // MARK: - Topic Service

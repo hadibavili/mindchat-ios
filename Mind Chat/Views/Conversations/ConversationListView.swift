@@ -9,6 +9,7 @@ struct SidebarView: View {
     @ObservedObject var chatVM: ChatViewModel
     @Binding var showSidebar: Bool
     @Binding var showKnowledge: Bool
+    @Binding var showMyMind: Bool
     @Binding var showSettings: Bool
     @Binding var showConversationHistory: Bool
     @Binding var showTopic: TopicNavTarget?
@@ -102,6 +103,7 @@ struct SidebarView: View {
 
             ScrollView(showsIndicators: false) {
                 LazyVStack(spacing: 0) {
+                    myMindButton
                     memorySection
                     conversationsSection
                 }
@@ -176,6 +178,32 @@ struct SidebarView: View {
         .padding(.vertical, 9)
         .background(Color.mcBgSecondary)
         .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+    }
+
+    // MARK: - My Mind Button
+
+    private var myMindButton: some View {
+        Button {
+            dismiss { showMyMind = true }
+        } label: {
+            HStack(spacing: 10) {
+                Image(systemName: "brain.head.profile")
+                    .font(.system(size: 15))
+                    .foregroundStyle(Color.mcTextLink)
+                    .frame(width: 22)
+                Text("My Mind")
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundStyle(Color.mcTextPrimary)
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(Color.mcTextTertiary)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(SidebarRowButtonStyle())
     }
 
     // MARK: - Recent Conversations Section

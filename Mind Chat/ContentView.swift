@@ -32,6 +32,7 @@ struct MainTabView: View {
     @StateObject private var topicsVM        = TopicsViewModel()
     @State private var showSidebar              = false
     @State private var showKnowledge            = false
+    @State private var showMyMind               = false
     @State private var showSettings             = false
     @State private var showConversationHistory  = false
     @State private var showTopic: TopicNavTarget? = nil
@@ -53,6 +54,9 @@ struct MainTabView: View {
             }
             .sheet(isPresented: $showKnowledge) {
                 TopicsDashboardView(vm: topicsVM)
+            }
+            .sheet(isPresented: $showMyMind) {
+                MyMindView(topicsVM: topicsVM)
             }
             .sheet(isPresented: $showConversationHistory) {
                 ConversationHistoryView(
@@ -91,6 +95,7 @@ struct MainTabView: View {
                     chatVM: chatVM,
                     showSidebar: $showSidebar,
                     showKnowledge: $showKnowledge,
+                    showMyMind: $showMyMind,
                     showSettings: $showSettings,
                     showConversationHistory: $showConversationHistory,
                     showTopic: $showTopic
@@ -116,6 +121,7 @@ struct MainTabView: View {
             if case .navigateToMessage(let convId, _) = event {
                 showTopic = nil
                 showKnowledge = false
+                showMyMind = false
                 showConversationHistory = false
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) {
                     chatVM.newChat()
@@ -125,6 +131,7 @@ struct MainTabView: View {
             if case .startChatWithTopic(let topicId, let topicName, let factCount) = event {
                 showTopic = nil
                 showKnowledge = false
+                showMyMind = false
                 showConversationHistory = false
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
                     chatVM.newChat()
