@@ -26,13 +26,13 @@ enum CacheKey {
 
     var ttl: TimeInterval {
         switch self {
-        case .conversations:    return 1 * 24 * 60 * 60
-        case .topicsTree:       return 1 * 24 * 60 * 60
-        case .topicsStats:      return 1 * 24 * 60 * 60
-        case .topicDetail:      return 1 * 24 * 60 * 60
+        case .conversations:    return 30 * 24 * 60 * 60
+        case .topicsTree:       return 30 * 24 * 60 * 60
+        case .topicsStats:      return 30 * 24 * 60 * 60
+        case .topicDetail:      return 30 * 24 * 60 * 60
         case .settings:         return 30 * 24 * 60 * 60
         case .usage:            return 30 * 24 * 60 * 60
-        case .suggestQuestions: return 20 * 60
+        case .suggestQuestions: return 60 * 60
         }
     }
 

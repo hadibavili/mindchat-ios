@@ -9,6 +9,7 @@ struct MessageBubble: View {
     // Single Identifiable item — eliminates the isPresented/selectedURL race condition.
     @State private var selectedImageItem: SelectedImageItem?
     @State private var showCopied = false
+    @State private var showSelectableText = false
     @State private var thumbsUp = false
     @State private var thumbsDown = false
 
@@ -43,6 +44,10 @@ struct MessageBubble: View {
         Group {
             if isUser {
                 userBubble
+                    .contextMenu { userContextMenuContent }
+            } else if !message.isStreaming && !message.isError && !message.content.isEmpty && !isQuestionFormMessage {
+                assistantBubble
+                    .contextMenu { assistantContextMenuContent }
             } else {
                 assistantBubble
             }
@@ -51,7 +56,6 @@ struct MessageBubble: View {
         .padding(.vertical, 6)
         .background(isHighlighted ? themeManager.accentColor.opacity(0.07) : Color.clear)
         .animation(.easeInOut(duration: 0.4), value: isHighlighted)
-        .modifier(ConditionalContextMenu(show: !isQuestionFormMessage) { contextMenuContent })
         // item: binding is atomic — no race condition between URL and isPresented
         .fullScreenCover(item: $selectedImageItem) { item in
             ImageViewerSheet(item: item)
@@ -102,6 +106,17 @@ struct MessageBubble: View {
                         .font(.body)
                         .foregroundStyle(Color.accentRed)
                 }
+                Button { Task { await vm.retryError(messageId: message.id) } } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "arrow.counterclockwise")
+                            .font(.system(size: 14))
+                        Text("Retry")
+                            .font(.footnote)
+                    }
+                    .foregroundStyle(Color.mcTextTertiary)
+                }
+                .buttonStyle(.plain)
+                .padding(.top, 4)
             } else if message.content.isEmpty && message.isStreaming {
                 EmptyView()
             } else if let result = activeQuestionForm {
@@ -163,6 +178,11 @@ struct MessageBubble: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+        .sheet(isPresented: $showSelectableText) {
+            SelectableTextSheet(text: message.content)
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
+        }
     }
 
     // MARK: - Assistant Action Bar
@@ -207,6 +227,15 @@ struct MessageBubble: View {
             }
             .buttonStyle(.plain)
 
+            Button {
+                showSelectableText = true
+            } label: {
+                Image(systemName: "character.cursor.ibeam")
+                    .font(.system(size: 14))
+                    .foregroundStyle(Color.mcTextTertiary)
+            }
+            .buttonStyle(.plain)
+
             if message == vm.messages.last(where: { $0.role == .assistant }) {
                 Button { Task { await vm.regenerateLast() } } label: {
                     Image(systemName: "arrow.clockwise")
@@ -219,10 +248,10 @@ struct MessageBubble: View {
         .padding(.top, 4)
     }
 
-    // MARK: - Context Menu
+    // MARK: - Context Menus
 
     @ViewBuilder
-    private var contextMenuContent: some View {
+    private var userContextMenuContent: some View {
         Button {
             vm.copyMessage(message)
             showCopied = true
@@ -231,21 +260,32 @@ struct MessageBubble: View {
             Label(showCopied ? "Copied!" : "Copy", systemImage: showCopied ? "checkmark" : "doc.on.doc")
         }
 
-        if message.role == .user && message == vm.messages.last(where: { $0.role == .user }) {
+        if message == vm.messages.last(where: { $0.role == .user }) {
             Button { vm.editLastUserMessage() } label: {
                 Label("Edit", systemImage: "pencil")
             }
         }
+    }
 
-        if message.role == .assistant && message == vm.messages.last(where: { $0.role == .assistant }) {
-            Button { Task { await vm.regenerateLast() } } label: {
-                Label("Regenerate", systemImage: "arrow.clockwise")
-            }
+    @ViewBuilder
+    private var assistantContextMenuContent: some View {
+        Button {
+            showSelectableText = true
+        } label: {
+            Label("Select Text", systemImage: "character.cursor.ibeam")
         }
 
-        if message.isError {
-            Button { Task { await vm.retryError(messageId: message.id) } } label: {
-                Label("Retry", systemImage: "arrow.counterclockwise")
+        Button {
+            vm.copyMessage(message)
+            showCopied = true
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2) { showCopied = false }
+        } label: {
+            Label("Copy", systemImage: "doc.on.doc")
+        }
+
+        if message == vm.messages.last(where: { $0.role == .assistant }) {
+            Button { Task { await vm.regenerateLast() } } label: {
+                Label("Regenerate", systemImage: "arrow.clockwise")
             }
         }
     }
@@ -383,17 +423,3 @@ struct AttachmentGrid: View {
     }
 }
 
-// MARK: - Conditional Context Menu
-
-private struct ConditionalContextMenu<MenuContent: View>: ViewModifier {
-    let show: Bool
-    @ViewBuilder let menuContent: () -> MenuContent
-
-    func body(content: Content) -> some View {
-        if show {
-            content.contextMenu { menuContent() }
-        } else {
-            content
-        }
-    }
-}

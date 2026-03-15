@@ -122,11 +122,19 @@ final class APIClient {
         if let token = keychain.accessToken {
             req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         }
-        let (data, response) = try await session.data(for: req)
+        let data: Data
+        let response: URLResponse
+        do {
+            (data, response) = try await session.data(for: req)
+        } catch {
+            ErrorReporter.shared.reportNetworkError(endpoint: path, error: error)
+            throw AppError.networkError(error.localizedDescription)
+        }
         guard let http = response as? HTTPURLResponse else {
             throw AppError.networkError("Invalid response")
         }
         guard (200...299).contains(http.statusCode) else {
+            ErrorReporter.shared.reportAPIError(endpoint: path, statusCode: http.statusCode)
             throw AppError.serverError("HTTP \(http.statusCode)")
         }
         return data
@@ -158,16 +166,34 @@ final class APIClient {
             // Detect HTML redirect masquerading as 200 (server returns login page for unauth requests)
             let contentType = http.value(forHTTPHeaderField: "Content-Type") ?? ""
             if contentType.contains("text/html") {
+                if !endpoint.contains("error-reports") {
+                    ErrorReporter.shared.reportAPIError(
+                        endpoint: endpoint, statusCode: http.statusCode,
+                        responseBody: "HTML redirect detected (Content-Type: text/html)"
+                    )
+                }
                 throw AppError.unauthorized
             }
             // Also catch HTML body even if Content-Type header is missing/wrong
             if let prefix = String(data: data.prefix(20), encoding: .utf8),
                prefix.lowercased().hasPrefix("<!doctype") || prefix.lowercased().hasPrefix("<html") {
+                if !endpoint.contains("error-reports") {
+                    ErrorReporter.shared.reportAPIError(
+                        endpoint: endpoint, statusCode: http.statusCode,
+                        responseBody: "HTML redirect detected (body starts with HTML)"
+                    )
+                }
                 throw AppError.unauthorized
             }
             do {
                 return try JSONDecoder.mindChat.decode(T.self, from: data)
             } catch {
+                if !endpoint.contains("error-reports") {
+                    ErrorReporter.shared.reportAPIError(
+                        endpoint: endpoint, statusCode: http.statusCode,
+                        responseBody: "Decoding failed: \(error.localizedDescription)"
+                    )
+                }
                 throw AppError.decodingError(error.localizedDescription)
             }
         case 401:
@@ -175,15 +201,34 @@ final class APIClient {
             if !isRefreshing {
                 isRefreshing = true
                 defer { isRefreshing = false }
-                try await refreshTokens()
-                return try await perform(retried(req))
+                do {
+                    try await refreshTokens()
+                    return try await perform(retried(req))
+                } catch {
+                    if !endpoint.contains("error-reports") {
+                        ErrorReporter.shared.reportAPIError(endpoint: endpoint, statusCode: 401)
+                    }
+                    throw error
+                }
+            }
+            if !endpoint.contains("error-reports") {
+                ErrorReporter.shared.reportAPIError(endpoint: endpoint, statusCode: 401)
             }
             throw AppError.unauthorized
         case 403:
+            if !endpoint.contains("error-reports") {
+                ErrorReporter.shared.reportAPIError(endpoint: endpoint, statusCode: 403)
+            }
             throw AppError.forbidden
         case 404:
+            if !endpoint.contains("error-reports") {
+                ErrorReporter.shared.reportAPIError(endpoint: endpoint, statusCode: 404)
+            }
             throw AppError.notFound
         case 429:
+            if !endpoint.contains("error-reports") {
+                ErrorReporter.shared.reportAPIError(endpoint: endpoint, statusCode: 429)
+            }
             throw AppError.rateLimited
         case 400:
             let responseStr = String(data: data, encoding: .utf8)

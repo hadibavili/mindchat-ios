@@ -25,7 +25,7 @@ struct SubscriptionView: View {
 
                 // Usage meters
                 HStack(spacing: 12) {
-                    UsageMeterView(label: "Messages", icon: "message.fill",
+                    UsageMeterView(label: "Daily Messages", icon: "message.fill",
                                    used: vm.messagesUsedToday, limit: vm.messagesLimit)
                     UsageMeterView(label: "Memories", icon: "brain.head.profile",
                                    used: vm.totalFacts, limit: vm.factsLimit)
