@@ -76,7 +76,9 @@ struct GeneralSettingsSection: View {
             }
 
             Toggle("Auto-extract memories", isOn: $vm.autoExtract)
+                .accessibilityIdentifier("settings.autoExtractToggle")
             Toggle("Show memory indicators", isOn: $vm.showMemoryIndicators)
+                .accessibilityIdentifier("settings.memoryIndicatorToggle")
         }
 
     }

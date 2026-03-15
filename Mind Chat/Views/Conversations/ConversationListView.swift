@@ -120,6 +120,7 @@ struct SidebarView: View {
 
             userRow
         }
+        .accessibilityIdentifier("sidebar.container")
         .background(Color.mcBgSidebar)
         .onReceive(EventBus.shared.events) { event in
             if case .topicsUpdated = event {
@@ -204,6 +205,7 @@ struct SidebarView: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(SidebarRowButtonStyle())
+        .accessibilityIdentifier("sidebar.myMindButton")
     }
 
     // MARK: - Recent Conversations Section
@@ -272,6 +274,7 @@ struct SidebarView: View {
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
+                .accessibilityIdentifier("sidebar.seeAllConversations")
             }
         } else if !searchText.isEmpty && filteredConversations.isEmpty && filteredTopics.isEmpty {
             Text("No results")
@@ -360,6 +363,7 @@ struct SidebarView: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .accessibilityIdentifier("sidebar.memorySection")
 
         if memoryExpanded {
             if topicsVm.isLoading && topicsVm.rootTopics.isEmpty {
@@ -485,6 +489,7 @@ struct SidebarView: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(SidebarRowButtonStyle())
+        .accessibilityIdentifier("sidebar.userRow")
     }
 
     private var initials: String {

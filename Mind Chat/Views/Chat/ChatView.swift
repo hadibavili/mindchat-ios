@@ -109,6 +109,9 @@ struct ChatView: View {
                     .animation(.mcGentle, value: vm.messages.count)
                 }
                 .scrollDismissesKeyboard(.interactively)
+                .onTapGesture {
+                    UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                }
                 .onScrollPhaseChange { _, newPhase in
                     isInteracting = (newPhase == .interacting)
                 }
@@ -204,6 +207,7 @@ struct ChatView: View {
                     Image(systemName: "sidebar.leading")
                         .font(.system(size: 18))
                 }
+                .accessibilityIdentifier("chat.sidebarToggle")
             }
 
             // Center: model name + chevron
@@ -219,6 +223,7 @@ struct ChatView: View {
                             .foregroundStyle(Color.secondary)
                     }
                 }
+                .accessibilityIdentifier("chat.modelSelector")
             }
 
             // Right: new-chat pencil (always) + ellipsis menu (in conversation)
@@ -252,6 +257,7 @@ struct ChatView: View {
                         Image(systemName: "square.and.pencil")
                             .font(.system(size: 18))
                     }
+                    .accessibilityIdentifier("chat.newChatButton")
                 }
             }
         }

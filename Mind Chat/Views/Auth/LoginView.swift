@@ -38,6 +38,7 @@ struct LoginView: View {
                         }
                         .pickerStyle(.segmented)
                         .padding(.horizontal)
+                        .accessibilityIdentifier("auth.modePicker")
 
                         // Fields
                         VStack(spacing: 14) {
@@ -140,6 +141,7 @@ struct LoginView: View {
                         }
                         .disabled(vm.isLoading)
                         .padding(.horizontal)
+                        .accessibilityIdentifier("auth.submitButton")
 
                         // Divider
                         HStack {
@@ -224,6 +226,7 @@ struct AuthSecureField: View {
                 Button { show.toggle() } label: {
                     Image(systemName: show ? "eye.slash" : "eye").foregroundStyle(.secondary)
                 }
+                .accessibilityIdentifier("auth.passwordToggle")
             }
             .padding()
             .background(Color.mcBgSecondary)

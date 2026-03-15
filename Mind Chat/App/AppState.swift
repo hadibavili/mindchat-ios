@@ -24,6 +24,13 @@ final class AppState: ObservableObject {
     init() {
         if CommandLine.arguments.contains("--uitesting") {
             isAuthenticated = true
+            currentUser = User(
+                id: "test-user",
+                email: "test@mindchat.test",
+                name: "Test User",
+                image: nil,
+                emailVerified: "verified"
+            )
             return
         }
         isAuthenticated = KeychainManager.shared.isAuthenticated

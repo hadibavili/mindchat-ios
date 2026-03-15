@@ -33,6 +33,9 @@ final class APIClient {
 
         if let token = keychain.accessToken {
             req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+            #if DEBUG
+            print("🔑 [DEBUG] Bearer \(token)")
+            #endif
         }
         for (key, value) in headers {
             req.setValue(value, forHTTPHeaderField: key)
@@ -62,6 +65,7 @@ final class APIClient {
 
         if let token = keychain.accessToken {
             req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+            print("🔑 [DEBUG] Bearer \(token)")
         }
 
         var body = Data()

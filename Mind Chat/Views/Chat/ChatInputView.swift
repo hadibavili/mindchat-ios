@@ -143,6 +143,7 @@ struct ChatInputView: View {
                             .padding(.bottom, 10)
                             .focused($isInputFocused)
                             .disabled(vm.isStreaming)
+                            .accessibilityIdentifier("chat.input.textField")
 
                         // Bottom toolbar
                         HStack(alignment: .center, spacing: 0) {
@@ -377,6 +378,7 @@ struct ChatInputView: View {
             .animation(.mcSnappy, value: sendState)
         }
         .disabled(sendState == .disabledMic || (isOverLimit && sendState == .send))
+        .accessibilityIdentifier("chat.input.sendButton")
     }
 
     // MARK: - Photos
