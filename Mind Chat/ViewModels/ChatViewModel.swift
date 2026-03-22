@@ -650,6 +650,7 @@ final class ChatViewModel: ObservableObject {
             // silently ignore usage load failures
         }
         updateModelRecommendation(for: inputText)
+        loadSmartSuggestions()
     }
 
     private func updateModelRecommendation(for text: String) {

@@ -31,124 +31,63 @@ struct ChatView: View {
             // Messages
             ScrollViewReader { proxy in
                 ScrollView {
-                    VStack(spacing: 0) {
-                        if vm.messages.isEmpty && vm.isLoading {
-                            VStack(spacing: 12) {
-                                ProgressView()
-                                    .scaleEffect(1.2)
-                                    .tint(.secondary)
-                                Text("Loading conversation…")
-                                    .font(.footnote)
-                                    .foregroundStyle(.secondary)
-                            }
-                            .containerRelativeFrame(.vertical)
-                        } else if vm.messages.isEmpty {
-                            EmptyStateView(vm: vm)
-                                .containerRelativeFrame(.vertical)
-                        }
-
-                        // Top padding before first message
-                        if !vm.messages.isEmpty {
-                            Color.clear.frame(height: 16)
-                        }
-
-                        ForEach(Array(vm.messages.enumerated()), id: \.element.id) { idx, message in
-                            let prevDate = idx > 0 ? vm.messages[idx - 1].createdAt : nil
-                            if shouldShowSeparator(current: message.createdAt, previous: prevDate) {
-                                DateSeparator(date: message.createdAt)
-                            }
-                            MessageBubble(
-                                message: message,
-                                isHighlighted: vm.highlightMessageId == message.id,
-                                vm: vm
-                            )
-                            .id(message.id)
-                            .transition(.messageAppear)
-                        }
-                        .frame(maxWidth: 720)
-                        .frame(maxWidth: .infinity)
-
-                        if let start = vm.thinkingStart {
-                            ThinkingBubble(startTime: start)
-                                .padding(.horizontal, 16)
-                                .padding(.vertical, 6)
-                                .transition(.indicatorAppear)
-                        }
-
-                        if vm.isSearching {
-                            SearchingIndicator()
-                                .padding(.horizontal, 16)
-                                .padding(.vertical, 4)
-                                .transition(.indicatorAppear)
-                        }
-
-                        if vm.isGeneratingImage {
-                            GeneratingImageBubble()
-                                .padding(.horizontal, 16)
-                                .padding(.vertical, 4)
-                                .transition(.indicatorAppear)
-                        }
-
-
-                        if let error = vm.errorMessage {
-                            HStack {
-                                Image(systemName: "exclamationmark.circle")
-                                    .foregroundStyle(Color.accentRed)
-                                Text(error).font(.footnote).foregroundStyle(Color.accentRed)
-                                Spacer()
-                                Button("Retry") { Task { await vm.send() } }
-                                    .font(.footnote.weight(.medium))
-                                    .foregroundStyle(Color.mcTextLink)
-                            }
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 8)
-                        }
-
-                        Color.clear.frame(height: 8).id(bottomID)
-                    }
-                    .animation(.mcGentle, value: vm.messages.count)
+                    messageListContent
                 }
                 .scrollDismissesKeyboard(.interactively)
                 .onTapGesture {
                     UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
                 }
                 .onScrollPhaseChange { _, newPhase in
-                    isInteracting = (newPhase == .interacting)
+                    isInteracting = (newPhase != .idle)
                 }
                 .onScrollGeometryChange(for: Bool.self) { geo in
                     geo.contentOffset.y + geo.containerSize.height >= geo.contentSize.height - 50
                 } action: { _, isNearBottom in
                     atBottom = isNearBottom
-                    if isNearBottom {
-                        userScrolledUp = false          // User scrolled back to bottom
-                    } else if isInteracting {
-                        userScrolledUp = true           // User actively dragged away
+                    if isInteracting {
+                        if isNearBottom {
+                            userScrolledUp = false      // User actively scrolled back to bottom
+                        } else {
+                            userScrolledUp = true       // User actively scrolled away
+                        }
                     }
-                    // Content growth alone (isInteracting == false) does NOT set userScrolledUp
                 }
                 .onChange(of: vm.messages.count) { _, _ in
-                    userScrolledUp = false
-                    scrollToBottom(proxy)
-                }
-                .onChange(of: vm.isStreaming) { _, streaming in
-                    if streaming {
-                        userScrolledUp = false
+                    if !userScrolledUp {
                         scrollToBottom(proxy)
-                    } else {
-                        // Streaming finished — always reveal the completed response
+                    }
+                }
+                .onChange(of: vm.isLoading) { wasLoading, isLoading in
+                    if wasLoading && !isLoading && !vm.messages.isEmpty {
+                        // Conversation just loaded — scroll after layout settles
                         Task {
-                            try? await Task.sleep(nanoseconds: 150_000_000) // ~150 ms for final layout
+                            try? await Task.sleep(nanoseconds: 100_000_000)
                             userScrolledUp = false
                             scrollToBottom(proxy)
                         }
                     }
                 }
-                // Keep view pinned to bottom while tokens arrive, without per-token onChange
+                .onChange(of: vm.isStreaming) { _, streaming in
+                    if streaming {
+                        // New send — reset scroll lock and jump to bottom
+                        userScrolledUp = false
+                        scrollToBottom(proxy)
+                    } else if !userScrolledUp {
+                        // Streaming finished — reveal the completed response
+                        Task {
+                            try? await Task.sleep(nanoseconds: 150_000_000)
+                            if !userScrolledUp {
+                                scrollToBottom(proxy)
+                            }
+                        }
+                    }
+                }
+                // Keep view pinned to bottom while tokens arrive
                 .task(id: vm.isStreaming) {
                     guard vm.isStreaming else { return }
                     while !Task.isCancelled && vm.isStreaming {
                         if !userScrolledUp && !isInteracting {
-                            proxy.scrollTo(bottomID, anchor: .bottom) // no animation — instant, won't fight gesture
+                            proxy.scrollTo(bottomID, anchor: .bottom)
                         }
                         try? await Task.sleep(nanoseconds: 100_000_000) // 100ms
                     }
@@ -288,6 +227,96 @@ struct ChatView: View {
 
     private func scrollToBottom(_ proxy: ScrollViewProxy) {
         withAnimation { proxy.scrollTo(bottomID, anchor: .bottom) }
+    }
+
+    // MARK: - Message List Content
+
+    private var messageListContent: some View {
+        VStack(spacing: 0) {
+            if vm.messages.isEmpty && vm.isLoading {
+                VStack(spacing: 12) {
+                    ProgressView()
+                        .scaleEffect(1.2)
+                        .tint(.secondary)
+                    Text("Loading conversation…")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+                .containerRelativeFrame(.vertical)
+            } else if vm.messages.isEmpty {
+                EmptyStateView(vm: vm)
+                    .containerRelativeFrame(.vertical)
+            }
+
+            // Top padding before first message
+            if !vm.messages.isEmpty {
+                Color.clear.frame(height: 16)
+            }
+
+            ForEach(Array(vm.messages.enumerated()), id: \.element.id) { idx, message in
+                let prevDate = idx > 0 ? vm.messages[idx - 1].createdAt : nil
+                if shouldShowSeparator(current: message.createdAt, previous: prevDate) {
+                    DateSeparator(date: message.createdAt)
+                }
+                MessageBubble(
+                    message: message,
+                    isHighlighted: vm.highlightMessageId == message.id,
+                    vm: vm
+                )
+                .id(message.id)
+                .transition(.messageAppear)
+                .animation(.none, value: message.content)
+            }
+            .frame(maxWidth: 720)
+            .frame(maxWidth: .infinity)
+
+            Group {
+                if let start = vm.thinkingStart {
+                    ThinkingBubble(startTime: start)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 6)
+                        .transition(.indicatorAppear)
+                }
+            }
+            .animation(.mcGentle, value: vm.thinkingStart == nil)
+
+            Group {
+                if vm.isSearching {
+                    SearchingIndicator()
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 4)
+                        .transition(.indicatorAppear)
+                }
+            }
+            .animation(.mcGentle, value: vm.isSearching)
+
+            Group {
+                if vm.isGeneratingImage {
+                    GeneratingImageBubble()
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 4)
+                        .transition(.indicatorAppear)
+                }
+            }
+            .animation(.mcGentle, value: vm.isGeneratingImage)
+
+            if let error = vm.errorMessage {
+                HStack {
+                    Image(systemName: "exclamationmark.circle")
+                        .foregroundStyle(Color.accentRed)
+                    Text(error).font(.footnote).foregroundStyle(Color.accentRed)
+                    Spacer()
+                    Button("Retry") { Task { await vm.send() } }
+                        .font(.footnote.weight(.medium))
+                        .foregroundStyle(Color.mcTextLink)
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+            }
+
+            Color.clear.frame(height: 8).id(bottomID)
+        }
+        .animation(.mcGentle, value: vm.messages.count)
     }
 
     private func shouldShowSeparator(current: Date, previous: Date?) -> Bool {

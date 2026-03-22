@@ -4,9 +4,7 @@ struct TopicPillsView: View {
 
     let topics: [ExtractedTopic]
     @State private var visibleCount = 0
-    @State private var selectedTopicId: String?
-    @State private var selectedTopicName: String?
-    @State private var showTopicDetail = false
+    @State private var selectedTopic: TopicPillTarget?
 
     private var totalThingsRemembered: Int {
         topics.reduce(0) { $0 + $1.factsAdded }
@@ -43,25 +41,28 @@ struct TopicPillsView: View {
                 visibleCount = topics.count + 1
             }
         }
-        .sheet(isPresented: $showTopicDetail) {
-            if let topicId = selectedTopicId {
-                NavigationStack {
-                    TopicDetailView(topicId: topicId, title: selectedTopicName ?? "Topic")
-                        .navigationBarTitleDisplayMode(.inline)
+        .sheet(item: $selectedTopic) { target in
+            NavigationStack {
+                TopicDetailView(topicId: target.id, title: target.name)
+                    .navigationBarTitleDisplayMode(.inline)
                     .navigationDestination(for: TopicWithStats.self) { topic in
                         TopicDetailView(topicId: topic.id, title: topic.name)
                     }
-                }
             }
         }
     }
 
     private func lookupAndShow(path: String, name: String) async {
         guard let topicId = try? await TopicService.shared.lookupTopic(path: path) else { return }
-        selectedTopicId   = topicId
-        selectedTopicName = name
-        showTopicDetail   = true
+        selectedTopic = TopicPillTarget(id: topicId, name: name)
     }
+}
+
+// MARK: - Topic Pill Target
+
+private struct TopicPillTarget: Identifiable {
+    let id: String
+    let name: String
 }
 
 // MARK: - Summary Pill
