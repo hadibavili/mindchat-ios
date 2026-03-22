@@ -36,11 +36,35 @@ struct MainTabView: View {
     @State private var showSettings             = false
     @State private var showConversationHistory  = false
     @State private var showTopic: TopicNavTarget? = nil
+    @State private var dragOffset: CGFloat      = 0
+
+    private var sidebarWidth: CGFloat { min(UIScreen.main.bounds.width * 0.85, 320) }
+
+    // 0 = fully closed, 1 = fully open — drives offset and scrim together
+    private var sidebarProgress: CGFloat {
+        let base: CGFloat = showSidebar ? sidebarWidth : 0
+        return max(0, min(1, (base + dragOffset) / sidebarWidth))
+    }
 
     var body: some View {
         ZStack(alignment: .leading) {
 
-            // Main chat
+            // Sidebar sits behind — revealed as main content slides right
+            SidebarView(
+                conversationsVM: conversationsVM,
+                topicsVm: topicsVM,
+                chatVM: chatVM,
+                showSidebar: $showSidebar,
+                showKnowledge: $showKnowledge,
+                showMyMind: $showMyMind,
+                showSettings: $showSettings,
+                showConversationHistory: $showConversationHistory,
+                showTopic: $showTopic
+            )
+            .frame(width: sidebarWidth)
+            .ignoresSafeArea(edges: .vertical)
+
+            // Main content — pushed right when sidebar opens
             NavigationStack {
                 ChatView(
                     vm: chatVM,
@@ -76,37 +100,72 @@ struct MainTabView: View {
                     }
                 }
             }
-
-            // Scrim
-            if showSidebar {
-                Color.black.opacity(0.25)
+            // Visual scrim only — no gestures, never causes feedback loop
+            .overlay {
+                Color.black.opacity(0.25 * sidebarProgress)
                     .ignoresSafeArea()
-                    .onTapGesture {
-                        withAnimation(.spring(duration: 0.3, bounce: 0.15)) { showSidebar = false }
-                    }
-                    .zIndex(1)
+                    .allowsHitTesting(false)
+            }
+            .offset(x: sidebarProgress * sidebarWidth)
+
+            // Stationary close layer — sits in ZStack so it never moves
+            if showSidebar || dragOffset < 0 {
+                HStack(spacing: 0) {
+                    // Sidebar area: let touches pass through to the sidebar
+                    Color.clear
+                        .frame(width: sidebarWidth)
+                        .allowsHitTesting(false)
+                    // Chat area: tap or drag left to close
+                    Color.clear
+                        .frame(maxWidth: .infinity)
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            withAnimation(.spring(duration: 0.3, bounce: 0.15)) {
+                                showSidebar = false
+                                dragOffset = 0
+                            }
+                        }
+                        .gesture(
+                            DragGesture(minimumDistance: 10)
+                                .onChanged { value in
+                                    guard value.translation.width < 0 else { return }
+                                    dragOffset = max(-sidebarWidth, value.translation.width)
+                                }
+                                .onEnded { _ in
+                                    withAnimation(.spring(duration: 0.3, bounce: 0.15)) {
+                                        showSidebar = (sidebarWidth + dragOffset) > sidebarWidth / 2
+                                        dragOffset = 0
+                                    }
+                                }
+                        )
+                }
+                .ignoresSafeArea()
+                .zIndex(3)
             }
 
-            // Sliding sidebar
-            if showSidebar {
-                SidebarView(
-                    conversationsVM: conversationsVM,
-                    topicsVm: topicsVM,
-                    chatVM: chatVM,
-                    showSidebar: $showSidebar,
-                    showKnowledge: $showKnowledge,
-                    showMyMind: $showMyMind,
-                    showSettings: $showSettings,
-                    showConversationHistory: $showConversationHistory,
-                    showTopic: $showTopic
-                )
-                .frame(width: min(UIScreen.main.bounds.width * 0.85, 320))
-                .ignoresSafeArea(edges: .vertical)
-                .transition(.move(edge: .leading))
-                .zIndex(2)
+            // Thin edge strip — captures open gesture without conflicting with scroll views
+            if !showSidebar {
+                Color.clear
+                    .frame(width: 24)
+                    .frame(maxHeight: .infinity)
+                    .contentShape(Rectangle())
+                    .gesture(
+                        DragGesture(minimumDistance: 10)
+                            .onChanged { value in
+                                guard value.translation.width > 0 else { return }
+                                dragOffset = min(sidebarWidth, value.translation.width)
+                            }
+                            .onEnded { _ in
+                                withAnimation(.spring(duration: 0.3, bounce: 0.15)) {
+                                    showSidebar = dragOffset > sidebarWidth / 2
+                                    dragOffset = 0
+                                }
+                            }
+                    )
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .zIndex(3)
             }
         }
-        .animation(.spring(duration: 0.3, bounce: 0.15), value: showSidebar)
         .task { await conversationsVM.load() }
         .task { await chatVM.loadSettings() }
         .task { await topicsVM.load() }
