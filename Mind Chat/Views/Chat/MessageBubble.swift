@@ -9,7 +9,6 @@ struct MessageBubble: View {
     // Single Identifiable item — eliminates the isPresented/selectedURL race condition.
     @State private var selectedImageItem: SelectedImageItem?
     @State private var showCopied = false
-    @State private var showSelectableText = false
     @State private var thumbsUp = false
     @State private var thumbsDown = false
 
@@ -47,7 +46,6 @@ struct MessageBubble: View {
                     .contextMenu { userContextMenuContent }
             } else if !message.isStreaming && !message.isError && !message.content.isEmpty && !isQuestionFormMessage {
                 assistantBubble
-                    .contextMenu { assistantContextMenuContent }
             } else {
                 assistantBubble
             }
@@ -152,9 +150,7 @@ struct MessageBubble: View {
                 }
                 .padding(.top, 4)
             } else {
-                MarkdownView(text: message.content, onImageTap: { url in
-                    selectedImageItem = SelectedImageItem(url: url, preloadedImage: nil)
-                })
+                SelectableTextRepresentable(text: message.content)
 
                 if message.isStreaming && !message.content.isEmpty {
                     Text("●")
@@ -178,11 +174,6 @@ struct MessageBubble: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .sheet(isPresented: $showSelectableText) {
-            SelectableTextSheet(text: message.content)
-                .presentationDetents([.medium, .large])
-                .presentationDragIndicator(.visible)
-        }
     }
 
     // MARK: - Assistant Action Bar
@@ -227,15 +218,6 @@ struct MessageBubble: View {
             }
             .buttonStyle(.plain)
 
-            Button {
-                showSelectableText = true
-            } label: {
-                Image(systemName: "character.cursor.ibeam")
-                    .font(.system(size: 14))
-                    .foregroundStyle(Color.mcTextTertiary)
-            }
-            .buttonStyle(.plain)
-
             if message == vm.messages.last(where: { $0.role == .assistant }) {
                 Button { Task { await vm.regenerateLast() } } label: {
                     Image(systemName: "arrow.clockwise")
@@ -267,28 +249,7 @@ struct MessageBubble: View {
         }
     }
 
-    @ViewBuilder
-    private var assistantContextMenuContent: some View {
-        Button {
-            showSelectableText = true
-        } label: {
-            Label("Select Text", systemImage: "character.cursor.ibeam")
-        }
 
-        Button {
-            vm.copyMessage(message)
-            showCopied = true
-            DispatchQueue.main.asyncAfter(deadline: .now() + 2) { showCopied = false }
-        } label: {
-            Label("Copy", systemImage: "doc.on.doc")
-        }
-
-        if message == vm.messages.last(where: { $0.role == .assistant }) {
-            Button { Task { await vm.regenerateLast() } } label: {
-                Label("Regenerate", systemImage: "arrow.clockwise")
-            }
-        }
-    }
 }
 
 // MARK: - Search Sources Row

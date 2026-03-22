@@ -22,7 +22,7 @@ struct SelectableTextSheet: View {
 
 // MARK: - UITextView wrapper for native text selection
 
-private struct SelectableTextRepresentable: UIViewRepresentable {
+struct SelectableTextRepresentable: UIViewRepresentable {
     let text: String
     @Environment(\.colorScheme) private var colorScheme
 
@@ -30,10 +30,17 @@ private struct SelectableTextRepresentable: UIViewRepresentable {
         let tv = UITextView()
         tv.isEditable = false
         tv.isSelectable = true
+        tv.isScrollEnabled = false
         tv.backgroundColor = .clear
-        tv.textContainerInset = UIEdgeInsets(top: 16, left: 12, bottom: 16, right: 12)
+        tv.textContainerInset = .zero
+        tv.textContainer.lineFragmentPadding = 0
         tv.dataDetectorTypes = [.link]
         return tv
+    }
+
+    func sizeThatFits(_ proposal: ProposedViewSize, uiView: UITextView, context: Context) -> CGSize? {
+        let width = proposal.width ?? UIScreen.main.bounds.width
+        return uiView.sizeThatFits(CGSize(width: width, height: .infinity))
     }
 
     func updateUIView(_ tv: UITextView, context: Context) {
