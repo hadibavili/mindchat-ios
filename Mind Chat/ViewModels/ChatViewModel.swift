@@ -29,6 +29,7 @@ final class ChatViewModel: ObservableObject {
     @Published var thinkingStart: Date?
     @Published var attachments: [PendingAttachment] = []
     @Published var isUploading = false
+    @Published var uploadingAttachmentIds: Set<String> = []
     @Published var uploadProgress: (current: Int, total: Int)? = nil
     @Published var isRecording = false
     @Published var isTranscribing = false
@@ -157,6 +158,17 @@ final class ChatViewModel: ObservableObject {
 
     // MARK: - Send
 
+    func uploadAttachmentEarly(_ att: PendingAttachment) {
+        uploadingAttachmentIds.insert(att.id)
+        Task {
+            defer { uploadingAttachmentIds.remove(att.id) }
+            guard let resp = try? await upload.upload(attachment: att) else { return }
+            if let idx = attachments.firstIndex(where: { $0.id == att.id }) {
+                attachments[idx].uploadedURL = resp.url
+            }
+        }
+    }
+
     func send() async {
         Task { await NotificationManager.shared.requestPermissionIfNeeded() }
 
@@ -184,10 +196,17 @@ final class ChatViewModel: ObservableObject {
         // so the message only appears once we know uploads succeeded.
         var uploadedAttachments: [PendingAttachment] = []
         if !pendingAttachments.isEmpty {
-            isUploading = true
-            uploadProgress = (current: 0, total: pendingAttachments.count)
+            let anyNeedsUpload = pendingAttachments.contains { $0.uploadedURL == nil }
+            if anyNeedsUpload {
+                isUploading = true
+                uploadProgress = (current: 0, total: pendingAttachments.count)
+            }
             var failedCount = 0
             for (index, var att) in pendingAttachments.enumerated() {
+                if att.uploadedURL != nil {
+                    uploadedAttachments.append(att)
+                    continue
+                }
                 uploadProgress = (current: index + 1, total: pendingAttachments.count)
                 do {
                     let resp = try await upload.upload(attachment: att)
@@ -197,8 +216,10 @@ final class ChatViewModel: ObservableObject {
                     failedCount += 1
                 }
             }
-            isUploading = false
-            uploadProgress = nil
+            if anyNeedsUpload {
+                isUploading = false
+                uploadProgress = nil
+            }
             if failedCount > 0 {
                 isStreaming = false
                 attachments = pendingAttachments

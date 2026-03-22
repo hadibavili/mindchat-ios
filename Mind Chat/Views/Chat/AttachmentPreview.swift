@@ -3,6 +3,7 @@ import SwiftUI
 struct AttachmentPreview: View {
 
     @Binding var attachments: [PendingAttachment]
+    var uploadingIds: Set<String> = []
 
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
@@ -14,6 +15,14 @@ struct AttachmentPreview: View {
                             AsyncThumbnail(data: att.data)
                                 .frame(width: 72, height: 72)
                                 .clipShape(RoundedRectangle(cornerRadius: 10))
+                                .overlay {
+                                    if uploadingIds.contains(att.id) {
+                                        RoundedRectangle(cornerRadius: 10)
+                                            .fill(.black.opacity(0.4))
+                                        ProgressView()
+                                            .tint(.white)
+                                    }
+                                }
                         } else {
                             VStack(spacing: 4) {
                                 FileIconView(mimeType: att.mimeType, name: att.name, size: 32)

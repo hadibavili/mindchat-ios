@@ -112,7 +112,7 @@ struct ChatInputView: View {
 
                         // Attachment thumbnails
                         if !vm.attachments.isEmpty {
-                            AttachmentPreview(attachments: $vm.attachments)
+                            AttachmentPreview(attachments: $vm.attachments, uploadingIds: vm.uploadingAttachmentIds)
                                 .padding(.horizontal, 14)
                                 .padding(.top, 10)
                                 .transition(.move(edge: .top).combined(with: .opacity))
@@ -403,6 +403,7 @@ struct ChatInputView: View {
             att.data = jpegData
             // Back on @MainActor here (loadPhotos is called from .onChange which is on main)
             vm.attachments.append(att)
+            vm.uploadAttachmentEarly(att)
         }
         selectedPhotoItems = []
     }
@@ -417,6 +418,7 @@ struct ChatInputView: View {
         var att = PendingAttachment(localURL: tmpURL, name: name, kind: .image, mimeType: "image/jpeg")
         att.data = jpegData
         vm.attachments.append(att)
+        vm.uploadAttachmentEarly(att)
     }
 
     // MARK: - Files
